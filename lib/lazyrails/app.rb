@@ -59,7 +59,7 @@ module LazyRails
 
     # ─── Chamomile lifecycle ──────────────────────────────
 
-    def init
+    def start
       batch(
         load_introspect_cmd,
         load_about_cmd,
