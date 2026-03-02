@@ -1,0 +1,20 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "lazyrails"
+
+dir = ARGV[0] || Dir.pwd
+
+project = LazyRails::Project.detect(dir)
+if project.nil?
+  warn "Not a Rails project: #{dir}"
+  warn "Expected to find bin/rails or a Gemfile with 'rails'"
+  exit 1
+end
+
+if project.old_rails?
+  warn "Warning: Detected Rails #{project.rails_version} — some features may not work"
+end
+
+app = LazyRails::App.new(project)
+Chamomile.run(app, alt_screen: true)
