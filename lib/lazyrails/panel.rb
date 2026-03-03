@@ -4,7 +4,13 @@ module LazyRails
   class Panel
     TYPES = %i[status server routes database models tests gems].freeze
 
-    attr_accessor :type, :title, :items, :cursor, :scroll_offset, :loading, :error, :filter_text
+    attr_reader :type, :title, :items, :cursor, :scroll_offset, :loading, :error
+    attr_reader :filter_text
+
+    def filter_text=(value)
+      @filter_text = value
+      invalidate_filter_cache
+    end
 
     def initialize(type:, title:)
       @type = type
@@ -15,6 +21,34 @@ module LazyRails
       @loading = true
       @error = nil
       @filter_text = ""
+      @filtered_cache = nil
+      @filtered_cache_key = nil
+    end
+
+    def start_loading
+      @loading = true
+      @error = nil
+    end
+
+    def finish_loading(items:, error: nil)
+      @items = items
+      @loading = false
+      @error = error
+      invalidate_filter_cache
+    end
+
+    def fail_loading(error)
+      @loading = false
+      @error = error
+    end
+
+    def update_title(new_title)
+      @title = new_title
+    end
+
+    def replace_item_at(index, item)
+      @items[index] = item
+      invalidate_filter_cache
     end
 
     def selected_item
@@ -22,9 +56,16 @@ module LazyRails
     end
 
     def filtered_items
-      return items if filter_text.empty?
+      cache_key = [items.object_id, items.size, filter_text]
+      return @filtered_cache if @filtered_cache_key == cache_key
 
-      items.select { |item| item.to_s.downcase.include?(filter_text.downcase) }
+      @filtered_cache_key = cache_key
+      @filtered_cache = if filter_text.empty?
+        items
+      else
+        downcased = filter_text.downcase
+        items.select { |item| item.to_s.downcase.include?(downcased) }
+      end
     end
 
     def move_cursor(delta, visible_height)
@@ -47,6 +88,13 @@ module LazyRails
 
     def item_count
       filtered_items.size
+    end
+
+    private
+
+    def invalidate_filter_cache
+      @filtered_cache = nil
+      @filtered_cache_key = nil
     end
   end
 end

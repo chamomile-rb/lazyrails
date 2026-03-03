@@ -21,7 +21,7 @@ module LazyRails
           if (match = line.match(ASSOCIATION_RE))
             macro = match[1].to_sym
             name = match[2].to_sym
-            class_name = match[3] || classify_name(name.to_s)
+            class_name = match[3] || ViewHelpers.classify_name(name.to_s)
             associations << Association.new(macro: macro, name: name, class_name: class_name)
           end
 
@@ -77,12 +77,7 @@ module LazyRails
            on if unless message strict].include?(word)
       end
 
-      # Simple classify without ActiveSupport
-      def self.classify_name(name)
-        name.split("_").map(&:capitalize).join
-      end
-
-      private_class_method :parse_validates, :parse_validates_method, :validation_kind?, :classify_name
+      private_class_method :parse_validates, :parse_validates_method, :validation_kind?
     end
   end
 end

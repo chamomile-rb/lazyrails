@@ -99,8 +99,8 @@ module LazyRails
 
   # Messages for async data loading
   IntrospectLoadedMsg = Data.define(:data, :error)
-  AboutLoadedMsg = Data.define(:about, :stats, :notes, :error)
   GemsLoadedMsg = Data.define(:gems, :error)
   TestsLoadedMsg = Data.define(:files, :error)
   CommandFinishedMsg = Data.define(:entry, :panel)
+  TableRowsLoadedMsg = Data.define(:table, :columns, :rows, :error)
 end

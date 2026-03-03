@@ -13,7 +13,7 @@ module LazyRails
 
       def self.render_item(route, selected:, width:)
         verb = route.verb.ljust(7)
-        path = truncate(route.path, [width - 12, 1].max)
+        path = ViewHelpers.truncate(route.path, [width - 12, 1].max)
 
         if selected
           Flourish::Style.new.reverse.render("#{verb} #{path}")
@@ -23,7 +23,7 @@ module LazyRails
         end
       end
 
-      def self.render_detail(route, project_dir, width:)
+      def self.render_detail(route, project_dir, width:, file_cache: nil)
         lines = []
         lines << "#{route.verb} #{route.path}"
         lines << "=" * [width - 4, 40].min
@@ -34,14 +34,14 @@ module LazyRails
 
         if route.action.include?("#")
           controller, action_name = route.action.split("#", 2)
-          controller_file = "app/controllers/#{controller.tr("::", "/")}_controller.rb"
+          controller_file = "app/controllers/#{controller.gsub("::", "/")}_controller.rb"
           full_path = File.join(project_dir, controller_file)
 
           lines << ""
           lines << "Controller: #{controller_file}"
-          if File.exist?(full_path)
+          content = file_cache ? file_cache.read(full_path) : safe_read(full_path)
+          if content
             lines << "Status:     File exists"
-            content = File.read(full_path)
             if content.include?("def #{action_name}")
               lines << "Method:     def #{action_name} \u2713"
             else
@@ -62,13 +62,11 @@ module LazyRails
         lines.join("\n")
       end
 
-      def self.truncate(str, max)
-        return str if max < 1 || str.length <= max
-
-        str[0..max - 2] + "\u2026"
+      def self.safe_read(path)
+        File.exist?(path) ? File.read(path) : nil
       end
+      private_class_method :safe_read
 
-      private_class_method :truncate
     end
   end
 end

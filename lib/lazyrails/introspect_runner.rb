@@ -105,4 +105,89 @@ rescue => e
   data[:models] = []
 end
 
+# ─── About / Stats / Notes ─────────────────────────────
+# Gathered here to avoid 3 extra Rails boot cycles.
+
+begin
+  about = {}
+  about["Ruby version"] = "#{RUBY_VERSION} (#{RUBY_PLATFORM})"
+  about["Rails version"] = Rails::VERSION::STRING
+  about["Environment"] = Rails.env
+  about["Database adapter"] = ActiveRecord::Base.connection_db_config.adapter rescue nil
+  about["Database"] = ActiveRecord::Base.connection_db_config.database rescue nil
+  data[:about] = about
+rescue => e
+  data[:about_error] = e.message
+  data[:about] = {}
+end
+
+begin
+  # Replicate `rails stats` output by reading the CodeStatistics
+  # We output the raw text so the existing parser can handle it
+  stats_directories = []
+
+  {
+    "Controllers" => "app/controllers",
+    "Helpers" => "app/helpers",
+    "Jobs" => "app/jobs",
+    "Models" => "app/models",
+    "Mailers" => "app/mailers",
+    "Channels" => "app/channels",
+    "Views" => "app/views",
+    "JavaScripts" => "app/javascript",
+    "Libraries" => "lib"
+  }.each do |name, dir|
+    full = Rails.root.join(dir)
+    stats_directories << [name, full.to_s] if full.directory?
+  end
+
+  {
+    "Controller tests" => "test/controllers",
+    "Helper tests" => "test/helpers",
+    "Model tests" => "test/models",
+    "Mailer tests" => "test/mailers",
+    "Job tests" => "test/jobs",
+    "Integration tests" => "test/integration",
+    "System tests" => "test/system"
+  }.each do |name, dir|
+    full = Rails.root.join(dir)
+    stats_directories << [name, full.to_s, true] if full.directory?
+  end
+
+  if Rails.root.join("spec").directory?
+    stats_directories << ["RSpec specs", Rails.root.join("spec").to_s, true]
+  end
+
+  if stats_directories.any?
+    cs = CodeStatistics.new(*stats_directories)
+    stats_output = StringIO.new
+    begin
+      $stdout = stats_output
+      cs.to_s
+    ensure
+      $stdout = STDOUT
+    end
+    data[:stats_raw] = stats_output.string
+  else
+    data[:stats_raw] = ""
+  end
+rescue => e
+  data[:stats_error] = e.message
+  data[:stats_raw] = ""
+end
+
+begin
+  annotations = Rails::SourceAnnotationExtractor.enumerate("OPTIMIZE|FIXME|TODO", tag: true)
+  notes = []
+  annotations.each do |file, entries|
+    entries.each do |entry|
+      notes << { file: file, line: entry.line, tag: entry.tag, message: entry.text }
+    end
+  end
+  data[:notes] = notes
+rescue => e
+  data[:notes_error] = e.message
+  data[:notes] = []
+end
+
 puts JSON.generate(data)

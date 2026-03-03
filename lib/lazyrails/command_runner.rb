@@ -2,16 +2,23 @@
 
 module LazyRails
   class CommandRunner
+    # cmd can be a String (passed to shell) or Array (exec'd directly, no shell).
+    # Use Array form when the command includes user input to prevent injection.
     def self.run(cmd, dir:, env: {})
       env = env.merge("DISABLE_SPRING" => "1")
       start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      stdout, stderr, status = Open3.capture3(env, cmd, chdir: dir)
+      stdout, stderr, status = if cmd.is_a?(Array)
+        Open3.capture3(env, *cmd, chdir: dir)
+      else
+        Open3.capture3(env, cmd, chdir: dir)
+      end
       duration = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000).round
       stdout = force_utf8(stdout)
       stderr = force_utf8(stderr)
 
+      display_cmd = cmd.is_a?(Array) ? cmd.join(" ") : cmd
       CommandEntry.new(
-        command: cmd,
+        command: display_cmd,
         exit_code: status.exitstatus || 1,
         duration_ms: duration,
         timestamp: Time.now,

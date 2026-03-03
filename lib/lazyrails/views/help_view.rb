@@ -27,7 +27,8 @@ module LazyRails
           ["M", "Run db:rollback"],
           ["c", "Create migration"],
           ["d", "Migrate down version"],
-          ["u", "Migrate up version"]
+          ["u", "Migrate up version"],
+          ["t", "Browse table data"]
         ] },
         { section: "Tests", bindings: [
           ["Enter", "Run selected test"],

@@ -2,7 +2,7 @@
 
 module LazyRails
   class Introspect
-    IntrospectData = Data.define(:routes, :tables, :migrations, :models, :connection, :error)
+    IntrospectData = Data.define(:routes, :tables, :migrations, :models, :connection, :about, :stats, :notes, :error)
 
     RUNNER_SCRIPT = File.expand_path("introspect_runner.rb", __dir__)
 
@@ -83,16 +83,37 @@ module LazyRails
         tables_count: conn[:tables_count]
       }
 
+      # Parse about data (already a simple hash from the runner)
+      about = (data[:about] || {}).transform_keys(&:to_s)
+
+      # Parse stats from raw output using existing parser
+      stats_raw = data[:stats_raw]&.to_s || ""
+      stats = stats_raw.empty? ? { rows: [], summary: {} } : Parsers::RailsStats.parse(stats_raw)
+
+      # Parse notes (already structured from the runner)
+      notes = (data[:notes] || []).map do |n|
+        Note.new(
+          file: n[:file].to_s,
+          line: n[:line].to_i,
+          tag: n[:tag].to_s,
+          message: n[:message].to_s
+        )
+      end
+
       IntrospectData.new(
         routes: routes,
         tables: tables,
         migrations: migrations,
         models: models,
         connection: connection,
+        about: about,
+        stats: stats,
+        notes: notes,
         error: data[:error]
       )
     rescue JSON::ParserError, TypeError, NoMethodError => e
-      IntrospectData.new(routes: [], tables: {}, migrations: [], models: [], connection: {}, error: e.message)
+      IntrospectData.new(routes: [], tables: {}, migrations: [], models: [], connection: {},
+                         about: {}, stats: { rows: [], summary: {} }, notes: [], error: e.message)
     end
   end
 end

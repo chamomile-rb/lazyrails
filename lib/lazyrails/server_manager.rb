@@ -15,6 +15,7 @@ module LazyRails
       @log_lines = []
       @thread = nil
       @mutex = Mutex.new
+      @log_dirty = false
     end
 
     def state
@@ -31,6 +32,7 @@ module LazyRails
 
         @state = :starting
         @log_lines.clear
+        @log_dirty = true
       end
 
       port_str = @port.to_s
@@ -49,6 +51,7 @@ module LazyRails
               @mutex.synchronize do
                 @log_lines << line
                 @log_lines.shift if @log_lines.size > MAX_LOG_LINES
+                @log_dirty = true
                 @state = :running if @state == :starting && line.include?("Listening on")
               end
             end
@@ -63,6 +66,7 @@ module LazyRails
           @mutex.synchronize do
             @state = :error
             @log_lines << "Error: #{e.message}\n"
+            @log_dirty = true
             @pid = nil
           end
         end
@@ -108,8 +112,15 @@ module LazyRails
       @mutex.synchronize { @state == :running }
     end
 
+    def log_changed?
+      @mutex.synchronize { @log_dirty }
+    end
+
     def log_content
-      @mutex.synchronize { @log_lines.join }
+      @mutex.synchronize do
+        @log_dirty = false
+        @log_lines.join
+      end
     end
   end
 end

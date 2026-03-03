@@ -10,7 +10,7 @@ module LazyRails
           icon = entry.success? ? "\u2713" : "\u2717"
           color = entry.success? ? "#04b575" : "#ff6347"
           duration = "%.1fs" % (entry.duration_ms / 1000.0)
-          cmd_text = truncate(entry.command, width - 12)
+          cmd_text = ViewHelpers.truncate(entry.command, width - 12)
           text = "#{icon} #{cmd_text.ljust(width - 12)} #{duration}"
 
           if i == selected
@@ -46,14 +46,6 @@ module LazyRails
         lines.join("\n")
       end
 
-      def self.truncate(str, max)
-        return str if max < 1
-        return str if str.length <= max
-
-        str[0..max - 2] + "\u2026"
-      end
-
-      private_class_method :truncate
     end
   end
 end

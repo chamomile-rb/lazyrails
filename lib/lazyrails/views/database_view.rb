@@ -6,17 +6,17 @@ module LazyRails
       def self.render_item(migration, selected:, width:)
         arrow = migration.up? ? "\u2191" : "\u2193"
         color = migration.up? ? "#04b575" : "#ff6347"
-        text = "#{arrow} #{migration.version}  #{truncate(migration.name, width - 22)}"
+        text = "#{arrow} #{migration.version}  #{ViewHelpers.truncate(migration.name, width - 22)}"
 
         if selected
           Flourish::Style.new.reverse.render(text)
         else
           icon = Flourish::Style.new.foreground(color).render(arrow)
-          "#{icon} #{migration.version}  #{truncate(migration.name, width - 22)}"
+          "#{icon} #{migration.version}  #{ViewHelpers.truncate(migration.name, width - 22)}"
         end
       end
 
-      def self.render_detail(migration, project_dir, width:)
+      def self.render_detail(migration, project_dir, width:, file_cache: nil)
         lines = []
         lines << "Migration: #{migration.name}"
         lines << "Version:   #{migration.version}"
@@ -26,11 +26,12 @@ module LazyRails
 
         if migration.file_path
           full_path = File.expand_path(migration.file_path, project_dir)
-          if File.exist?(full_path)
+          content = file_cache ? file_cache.read(full_path) : safe_read(full_path)
+          if content
             lines << "File: #{migration.file_path}"
             lines << "=" * [width - 4, 40].min
             lines << ""
-            lines << File.read(full_path)
+            lines << content
           else
             lines << "File not found: #{migration.file_path}"
           end
@@ -39,18 +40,15 @@ module LazyRails
         lines.join("\n")
       end
 
+      def self.safe_read(path)
+        File.exist?(path) ? File.read(path) : nil
+      end
+      private_class_method :safe_read
+
       def self.pending_count(migrations)
         migrations.count(&:down?)
       end
 
-      def self.truncate(str, max)
-        return str if max < 1
-        return str if str.length <= max
-
-        str[0..max - 2] + "\u2026"
-      end
-
-      private_class_method :truncate
     end
   end
 end
