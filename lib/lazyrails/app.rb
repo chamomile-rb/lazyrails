@@ -56,6 +56,7 @@ module LazyRails
       # Caches
       @detail_content = ""
       @file_cache = FileCache.new
+      @panel_render_cache = {}
     end
 
     # ─── Chamomile lifecycle ──────────────────────────────

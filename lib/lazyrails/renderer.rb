@@ -11,6 +11,14 @@ module LazyRails
       @panels.each_with_index do |panel, i|
         focused = i == @focused_panel
         h = panel_heights[i]
+
+        key = panel_cache_key(panel, focused, width, h)
+        cached = @panel_render_cache[panel.type]
+        if cached && cached[0] == key
+          sections << cached[1]
+          next
+        end
+
         content = render_panel_content(panel, width: width - 4, height: h - 2, focused: focused)
 
         border_color = focused ? FOCUSED_COLOR : UNFOCUSED_COLOR
@@ -28,10 +36,25 @@ module LazyRails
           box_lines[0] = inject_title(box_lines[0], title_styled, title.length)
         end
 
-        sections << box_lines.join
+        output = box_lines.join
+        @panel_render_cache[panel.type] = [key, output]
+        sections << output
       end
 
       Flourish.join_vertical(Flourish::LEFT, *sections)
+    end
+
+    def panel_cache_key(panel, focused, width, height)
+      base = [panel.items.object_id, panel.items.size, panel.cursor,
+              panel.scroll_offset, panel.filter_text, panel.loading,
+              panel.error, panel.title, focused, width, height]
+      case panel.type
+      when :status
+        base << @about_data.object_id
+      when :server
+        base << @server.state << @server.pid
+      end
+      base
     end
 
     def render_panel_content(panel, width:, height:, focused:)
