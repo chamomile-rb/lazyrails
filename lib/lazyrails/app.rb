@@ -17,7 +17,12 @@ module LazyRails
       { type: :database, title: "Database" },
       { type: :models,   title: "Models" },
       { type: :tests,    title: "Tests" },
-      { type: :gems,     title: "Gems" }
+      { type: :gems,     title: "Gems" },
+      { type: :rake,     title: "Rake" },
+      { type: :console,  title: "Console" },
+      { type: :credentials, title: "Credentials" },
+      { type: :logs,     title: "Logs" },
+      { type: :mailers,  title: "Mailers" }
     ].freeze
 
     FOCUSED_COLOR = "#7d56f4"
@@ -27,12 +32,19 @@ module LazyRails
 
     def initialize(project)
       @project = project
+      @config = Config.load(project.dir)
       @panels = PANEL_DEFS.map { |d| Panel.new(type: d[:type], title: d[:title]) }
+
+      unless @config.empty?
+        @panels << Panel.new(type: :custom, title: "Custom")
+      end
+
       @focused_panel = 0
       @width = 80
       @height = 24
       @command_log = CommandLog.new
       @server = ServerManager.new(project)
+      @log_watcher = LogWatcher.new(project)
       @detail_viewport = Petals::Viewport.new(width: 40, height: 20)
 
       # Component objects
@@ -46,6 +58,11 @@ module LazyRails
       @about_data = {}
       @stats_data = {}
       @notes_data = []
+      @eval_history = []
+      @credentials_content = nil
+      @mailer_preview_content = nil
+      @all_log_entries = []
+      @log_filter = nil
 
       # UI state
       @show_help = false
@@ -62,10 +79,22 @@ module LazyRails
     # ─── Chamomile lifecycle ──────────────────────────────
 
     def start
+      unless @config.empty?
+        custom_panel = find_panel(:custom)
+        custom_panel.finish_loading(items: @config.custom_commands) if custom_panel
+      end
+
+      # Discover credential files (no subprocess needed)
+      discover_credentials
+
+      # Start log watcher background thread
+      @log_watcher.start
+
       batch(
         load_introspect_cmd,
         load_gems_cmd,
         load_tests_cmd,
+        load_mailers_cmd,
         ui_tick
       )
     end
@@ -85,8 +114,7 @@ module LazyRails
       when Chamomile::TickMsg
         return handle_tick
       when Chamomile::InterruptMsg
-        @server.stop
-        return quit
+        return shutdown
       when IntrospectLoadedMsg
         return handle_introspect_loaded(msg)
       when GemsLoadedMsg
@@ -99,6 +127,14 @@ module LazyRails
         handle_test_finished(msg)
       when TableRowsLoadedMsg
         handle_table_rows_loaded(msg)
+      when EvalFinishedMsg
+        handle_eval_finished(msg)
+      when CredentialsLoadedMsg
+        handle_credentials_loaded(msg)
+      when MailersLoadedMsg
+        handle_mailers_loaded(msg)
+      when MailerPreviewLoadedMsg
+        handle_mailer_preview_loaded(msg)
       end
 
       nil
@@ -175,6 +211,18 @@ module LazyRails
       @flash.set(message, duration: duration)
     end
 
+    def shutdown
+      @server.stop
+      @log_watcher.stop
+      quit
+    end
+
+    def clear_panel_state
+      @credentials_content = nil if current_panel.type == :credentials
+      @mailer_preview_content = nil if current_panel.type == :mailers
+      @pending_credential = nil
+    end
+
     def test_all_command
       if File.directory?(File.join(@project.dir, "spec"))
         "bundle exec rspec"
@@ -214,13 +262,13 @@ module LazyRails
       # Help overlay intercepts all keys
       if @show_help
         @show_help = false if msg.key == "?" || msg.key == :escape
-        return msg.key == "q" ? ((@server.stop; quit)) : nil
+        return msg.key == "q" ? shutdown : nil
       end
 
       # Command log overlay intercepts all keys
       if @command_log_overlay.visible?
         signal = @command_log_overlay.handle_key(msg.key)
-        return (@server.stop; quit) if signal == :quit
+        return shutdown if signal == :quit
         return nil
       end
 
@@ -228,7 +276,7 @@ module LazyRails
       if @table_browser.visible?
         signal = @table_browser.handle_key(msg.key)
         case signal
-        when :quit  then @server.stop; return quit
+        when :quit  then return shutdown
         when :close then @table_browser.hide
         when Hash
           return load_table_rows_cmd(signal[:table]) if signal[:action] == :load_table
@@ -238,6 +286,7 @@ module LazyRails
 
       # Handle Shift+Tab (Chamomile sends :tab with [:shift] modifier)
       if msg.key == :tab && msg.shift?
+        clear_panel_state
         @focused_panel = (@focused_panel - 1) % @panels.size
         update_detail_content
         return nil
@@ -245,16 +294,16 @@ module LazyRails
 
       case msg.key
       when "q"
-        @server.stop
-        return quit
+        return shutdown
       when "?"
         @show_help = true
       when "L"
         @command_log_overlay.show
       when :tab
+        clear_panel_state
         @focused_panel = (@focused_panel + 1) % @panels.size
         update_detail_content
-      when "1".."7"
+      when "1".."9"
         idx = msg.key.to_i - 1
         if idx < @panels.size
           @focused_panel = idx
@@ -289,6 +338,12 @@ module LazyRails
       when :gems     then handle_gems_key(msg)
       when :routes   then handle_routes_key(msg)
       when :models   then handle_models_key(msg)
+      when :rake     then handle_rake_key(msg)
+      when :console  then handle_console_key(msg)
+      when :credentials then handle_credentials_key(msg)
+      when :logs     then handle_logs_key(msg)
+      when :mailers  then handle_mailers_key(msg)
+      when :custom   then handle_custom_key(msg)
       end
     end
 
@@ -373,6 +428,109 @@ module LazyRails
       nil
     end
 
+    def handle_rake_key(_msg) = nil
+
+    def detect_rake_tier(name)
+      return :red    if name.include?("drop") || name.include?("purge")
+      return :yellow if name.include?("seed") || name.include?("reset")
+      :green
+    end
+
+    def decrypt_selected_credential
+      item = current_panel.selected_item
+      return nil unless item
+
+      if item.exists
+        env = item.environment.gsub(" (default)", "")
+        start_confirmation("bin/rails credentials:show --environment #{env}", tier: :yellow)
+        @pending_credential = item
+      else
+        set_flash("Key file missing for #{item.environment}")
+      end
+      nil
+    end
+
+    def handle_credentials_key(msg)
+      case msg.key
+      when :enter
+        return decrypt_selected_credential
+      when :escape
+        @credentials_content = nil
+        update_detail_content
+      when "e"
+        return exec("bin/rails", "credentials:edit")
+      end
+      nil
+    end
+
+    def handle_logs_key(msg)
+      panel = find_panel(:logs)
+      return nil unless panel
+
+      case msg.key
+      when "s"
+        @log_filter = @log_filter == :slow ? nil : :slow
+        apply_log_filter(panel)
+      when "e"
+        @log_filter = @log_filter == :errors ? nil : :errors
+        apply_log_filter(panel)
+      when "c"
+        @all_log_entries = []
+        @log_filter = nil
+        panel.finish_loading(items: [])
+        @log_watcher&.clear
+      end
+      nil
+    end
+
+    def apply_log_filter(panel)
+      entries = @all_log_entries || []
+      filtered = case @log_filter
+      when :slow   then entries.select(&:slow?)
+      when :errors then entries.select { |e| e.status.to_i >= 400 }
+      else entries
+      end
+      panel.finish_loading(items: filtered)
+    end
+
+    def handle_mailers_key(msg)
+      item = current_panel.selected_item
+      return nil unless item
+
+      # Enter is handled by handle_enter
+      case msg.key
+      when "o"
+        if @server.running?
+          Platform.open_url("http://localhost:#{@server.port}/rails/mailers/#{item.mailer_class}/#{item.method_name}")
+        else
+          set_flash("Start the server first to open in browser")
+        end
+      end
+      nil
+    end
+
+    def handle_console_key(msg)
+      case msg.key
+      when "e"
+        @input_mode.start_input(:eval_expression,
+          prompt: "ruby> ",
+          placeholder: "User.count")
+      when "X"
+        return exec("bin/rails", "console")
+      end
+      nil
+    end
+
+    def handle_custom_key(msg)
+      item = current_panel.selected_item
+      return nil unless item
+
+      if msg.key == item.key
+        start_confirmation(item.command.split, tier: item.confirmation_tier)
+      end
+      nil
+    end
+
     def handle_enter
       panel = current_panel
       item = panel.selected_item
@@ -381,6 +539,18 @@ module LazyRails
       case panel.type
       when :tests
         return run_test_file_cmd(item)
+      when :rake
+        return start_confirmation(
+          ["bin/rails", item.name],
+          tier: detect_rake_tier(item.name)
+        )
+      when :credentials
+        return decrypt_selected_credential
+      when :mailers
+        @mailer_preview_content = nil
+        return render_mailer_preview_cmd(item)
+      when :custom
+        return start_confirmation(item.command.split, tier: item.confirmation_tier)
       end
 
       update_detail_content
@@ -390,7 +560,7 @@ module LazyRails
     # ─── Input mode (from InputHandler) ───────────────────
 
     def start_filter
-      return unless %i[routes models tests gems].include?(current_panel.type)
+      return unless %i[routes models tests gems rake console logs mailers custom].include?(current_panel.type)
 
       @input_mode.start_filter
     end
@@ -431,6 +601,8 @@ module LazyRails
         return run_rails_cmd(%w[bin/rails generate migration] + value.split, :database) unless value.empty?
       when :generate_model
         return run_rails_cmd(%w[bin/rails generate model] + value.split, :models) unless value.empty?
+      when :eval_expression
+        return run_eval_cmd(value) unless value.empty?
       when :change_port
         port = value.to_i
         if port > 0 && port < 65_536
@@ -444,8 +616,12 @@ module LazyRails
     end
 
     def start_confirmation(command, tier: nil, required_text: nil)
-      panel_name = current_panel.title.downcase
-      required_text ||= panel_name if tier == :red
+      tier ||= Confirmation.detect_tier(command)
+
+      # Green-tier commands skip confirmation — run immediately
+      return run_rails_cmd(command, current_panel.type) if tier == :green
+
+      required_text ||= current_panel.title.downcase if tier == :red
       @confirmation = Confirmation.new(command: command, tier: tier, required_text: required_text)
     end
 
@@ -458,8 +634,17 @@ module LazyRails
         command = @confirmation.command
         panel_type = current_panel.type
         @confirmation = nil
+
+        # Special handling for credentials decryption
+        if @pending_credential
+          credential = @pending_credential
+          @pending_credential = nil
+          return decrypt_credentials_cmd(credential)
+        end
+
         return run_rails_cmd(command, panel_type)
       elsif @confirmation.cancelled?
+        @pending_credential = nil
         @confirmation = nil
         set_flash("Cancelled.")
       end
@@ -490,6 +675,19 @@ module LazyRails
         update_detail_content
       end
 
+      # Check log watcher for new entries
+      if @log_watcher.changed?
+        new_entries = @log_watcher.take_entries
+        unless new_entries.empty?
+          @all_log_entries = (@all_log_entries + new_entries).last(1000)
+          panel = find_panel(:logs)
+          if panel
+            apply_log_filter(panel)
+            update_detail_content if current_panel.type == :logs
+          end
+        end
+      end
+
       ui_tick
     end
 
@@ -498,7 +696,7 @@ module LazyRails
 
       if msg.error
         load_fallback_data
-        [:routes, :database, :models].each { |t| find_panel(t).fail_loading(msg.error) }
+        [:routes, :database, :models, :rake].each { |t| find_panel(t).fail_loading(msg.error) }
         find_panel(:status).fail_loading(msg.error)
       else
         @introspect_data = msg.data
@@ -511,6 +709,7 @@ module LazyRails
         db_panel.update_title(pending > 0 ? "Database (#{pending} pending)" : "Database")
 
         find_panel(:models).finish_loading(items: msg.data.models)
+        find_panel(:rake).finish_loading(items: msg.data.rake_tasks)
 
         # About/stats/notes now come from the same rails runner invocation
         @about_data = msg.data.about || {}
@@ -576,6 +775,40 @@ module LazyRails
       end
     end
 
+    def handle_eval_finished(msg)
+      panel = find_panel(:console)
+      @eval_history.unshift(msg.entry)
+      @eval_history = @eval_history.first(50)
+      panel.finish_loading(items: @eval_history)
+      update_detail_content
+    end
+
+    def handle_credentials_loaded(msg)
+      if msg.content
+        @credentials_content = msg.content
+      elsif msg.error
+        @credentials_content = "Error: #{msg.error}"
+      end
+      update_detail_content
+    end
+
+    def handle_mailers_loaded(msg)
+      panel = find_panel(:mailers)
+      panel&.finish_loading(items: msg.previews, error: msg.error)
+      update_detail_content
+    end
+
+    def handle_mailer_preview_loaded(msg)
+      if msg.error
+        @mailer_preview_content = { error: msg.error }
+      else
+        @mailer_preview_content = {
+          subject: msg.subject, to: msg.to, from: msg.from, body: msg.body
+        }
+      end
+      update_detail_content
+    end
+
     def handle_resize(msg)
       @width = msg.width
       @height = msg.height
@@ -587,15 +820,32 @@ module LazyRails
 
     def handle_refresh
       panel = current_panel
-      panel.start_loading
       case panel.type
-      when :routes, :database, :models, :status
+      when :routes, :database, :models, :status, :rake
+        panel.start_loading
         return load_introspect_cmd
       when :gems
+        panel.start_loading
         return load_gems_cmd
       when :tests
+        panel.start_loading
         return load_tests_cmd
+      when :mailers
+        panel.start_loading
+        return load_mailers_cmd
+      when :credentials
+        discover_credentials
+      when :custom
+        @config = Config.load(@project.dir)
+        custom_panel = find_panel(:custom)
+        custom_panel&.finish_loading(items: @config.custom_commands)
+      when :logs
+        # Clear and restart — new entries will flow in via tick
+        panel.finish_loading(items: [])
+        @log_watcher.clear
+        set_flash("Log buffer cleared.")
       end
+      # :server, :console — no refresh action (avoid stuck Loading state)
       nil
     end
 
@@ -614,6 +864,34 @@ module LazyRails
 
       start_confirmation(reverse, tier: :yellow)
       nil
+    end
+
+    def discover_credentials
+      panel = find_panel(:credentials)
+      return unless panel
+
+      project_dir = @project.dir
+      files = []
+
+      default_enc = File.join(project_dir, "config/credentials.yml.enc")
+      default_key = File.join(project_dir, "config/master.key")
+      files << CredentialFile.new(
+        environment: "development (default)",
+        path: default_enc,
+        exists: File.exist?(default_enc) && File.exist?(default_key)
+      )
+
+      Dir.glob(File.join(project_dir, "config/credentials/*.yml.enc")).each do |enc|
+        env = File.basename(enc, ".yml.enc")
+        key = File.join(project_dir, "config/credentials/#{env}.key")
+        files << CredentialFile.new(
+          environment: env,
+          path: enc,
+          exists: File.exist?(enc) && File.exist?(key)
+        )
+      end
+
+      panel.finish_loading(items: files)
     end
 
     def load_fallback_data

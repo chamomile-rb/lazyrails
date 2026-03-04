@@ -55,6 +55,15 @@ module LazyRails
       red? || yellow?
     end
 
+    def self.detect_tier(cmd)
+      cmd = cmd.join(" ") if cmd.is_a?(Array)
+      return :red if RED_PATTERNS.any? { |p| cmd.include?(p) }
+      return :yellow if YELLOW_PATTERNS.any? { |p| cmd.include?(p) }
+      return :yellow if cmd.match?(/\Abundle update\s*\z/)
+
+      :green
+    end
+
     private
 
     def check_confirmation
@@ -68,14 +77,6 @@ module LazyRails
       end
     end
 
-    def detect_tier(cmd)
-      return :red if RED_PATTERNS.any? { |p| cmd.include?(p) }
-      return :yellow if YELLOW_PATTERNS.any? { |p| cmd.include?(p) }
-
-      # "bundle update" (all gems) is yellow, but "bundle update GEM" is green
-      return :yellow if cmd.match?(/\Abundle update\s*\z/)
-
-      :green
-    end
+    def detect_tier(cmd) = self.class.detect_tier(cmd)
   end
 end

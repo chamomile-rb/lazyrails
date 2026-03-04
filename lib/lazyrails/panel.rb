@@ -2,7 +2,7 @@
 
 module LazyRails
   class Panel
-    TYPES = %i[status server routes database models tests gems].freeze
+    TYPES = %i[status server routes database models tests gems rake console credentials logs mailers custom].freeze
 
     attr_reader :type, :title, :items, :cursor, :scroll_offset, :loading, :error
     attr_reader :filter_text

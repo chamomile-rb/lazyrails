@@ -190,4 +190,18 @@ rescue => e
   data[:notes] = []
 end
 
+begin
+  Rails.application.load_tasks
+  data[:rake_tasks] = Rake.application.tasks.map do |t|
+    {
+      name: t.name,
+      description: t.comment,
+      source: t.locations&.first
+    }
+  end
+rescue => e
+  data[:rake_tasks] = []
+  data[:rake_tasks_error] = e.message
+end
+
 puts JSON.generate(data)

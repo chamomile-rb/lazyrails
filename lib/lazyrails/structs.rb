@@ -87,7 +87,12 @@ module LazyRails
     end
   end
 
-  CommandEntry = Data.define(:command, :exit_code, :duration_ms, :timestamp, :stdout, :stderr) do
+  CommandEntry = Data.define(:command, :exit_code, :duration_ms, :timestamp, :stdout, :stderr,
+                            :annotation, :undo_command) do
+    def initialize(annotation: nil, undo_command: nil, **kwargs)
+      super
+    end
+
     def success? = exit_code == 0
 
     def to_s
@@ -97,10 +102,39 @@ module LazyRails
     end
   end
 
+  CredentialFile = Data.define(:environment, :path, :exists) do
+    def to_s
+      exists ? environment : "#{environment} (missing key)"
+    end
+  end
+
+  MailerPreview = Data.define(:mailer_class, :method_name, :preview_path) do
+    def to_s = "  #{method_name}"
+    def display_name = "#{mailer_class}##{method_name}"
+  end
+
+  LogEntry = Data.define(:verb, :path, :status, :duration_ms, :sql_lines, :raw) do
+    def to_s
+      "#{verb&.ljust(6)} #{path&.ljust(30)} #{status}"
+    end
+
+    def slow? = sql_lines.any? { |s| s[:duration_ms].to_f > 100 }
+  end
+
+  RakeTask = Data.define(:name, :description, :source) do
+    def to_s
+      description.to_s.empty? ? name : "#{name.ljust(35)} #{description}"
+    end
+  end
+
   # Messages for async data loading
   IntrospectLoadedMsg = Data.define(:data, :error)
   GemsLoadedMsg = Data.define(:gems, :error)
   TestsLoadedMsg = Data.define(:files, :error)
   CommandFinishedMsg = Data.define(:entry, :panel)
   TableRowsLoadedMsg = Data.define(:table, :columns, :rows, :error)
+  EvalFinishedMsg = Data.define(:entry)
+  CredentialsLoadedMsg = Data.define(:environment, :content, :error)
+  MailersLoadedMsg = Data.define(:previews, :error)
+  MailerPreviewLoadedMsg = Data.define(:preview, :subject, :to, :from, :body, :error)
 end

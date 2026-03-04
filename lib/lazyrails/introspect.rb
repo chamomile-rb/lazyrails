@@ -2,7 +2,7 @@
 
 module LazyRails
   class Introspect
-    IntrospectData = Data.define(:routes, :tables, :migrations, :models, :connection, :about, :stats, :notes, :error)
+    IntrospectData = Data.define(:routes, :tables, :migrations, :models, :connection, :about, :stats, :notes, :rake_tasks, :error)
 
     RUNNER_SCRIPT = File.expand_path("introspect_runner.rb", __dir__)
 
@@ -100,6 +100,14 @@ module LazyRails
         )
       end
 
+      rake_tasks = (data[:rake_tasks] || []).map do |t|
+        RakeTask.new(
+          name: t[:name].to_s,
+          description: t[:description].to_s,
+          source: t[:source].to_s
+        )
+      end
+
       IntrospectData.new(
         routes: routes,
         tables: tables,
@@ -109,11 +117,12 @@ module LazyRails
         about: about,
         stats: stats,
         notes: notes,
+        rake_tasks: rake_tasks,
         error: data[:error]
       )
     rescue JSON::ParserError, TypeError, NoMethodError => e
       IntrospectData.new(routes: [], tables: {}, migrations: [], models: [], connection: {},
-                         about: {}, stats: { rows: [], summary: {} }, notes: [], error: e.message)
+                         about: {}, stats: { rows: [], summary: {} }, notes: [], rake_tasks: [], error: e.message)
     end
   end
 end

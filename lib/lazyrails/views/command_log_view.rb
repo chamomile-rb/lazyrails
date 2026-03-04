@@ -3,6 +3,8 @@
 module LazyRails
   module Views
     module CommandLogView
+      DIM = "#666666"
+
       def self.render(command_log, width:, selected: 0)
         return "No commands executed yet." if command_log.empty?
 
@@ -13,12 +15,25 @@ module LazyRails
           cmd_text = ViewHelpers.truncate(entry.command, width - 12)
           text = "#{icon} #{cmd_text.ljust(width - 12)} #{duration}"
 
+          lines = []
           if i == selected
-            Flourish::Style.new.reverse.render(text)
+            lines << Flourish::Style.new.reverse.render(text)
           else
             styled_icon = Flourish::Style.new.foreground(color).render(icon)
-            "#{styled_icon} #{cmd_text.ljust(width - 12)} #{duration}"
+            lines << "#{styled_icon} #{cmd_text.ljust(width - 12)} #{duration}"
           end
+
+          if entry.annotation
+            annotation_line = "  \u21b3 #{entry.annotation}"
+            lines << Flourish::Style.new.foreground(DIM).render(annotation_line)
+          end
+
+          if entry.undo_command
+            undo_line = "  \u21b3 Undo: #{entry.undo_command.join(" ")}"
+            lines << Flourish::Style.new.foreground(DIM).render(undo_line)
+          end
+
+          lines.join("\n")
         end.join("\n")
       end
 
@@ -28,9 +43,21 @@ module LazyRails
         lines << "Exit:    #{entry.exit_code}"
         lines << "Time:    #{entry.timestamp.strftime("%H:%M:%S")}"
         lines << "Duration: %.1fs" % (entry.duration_ms / 1000.0)
-        lines << ""
+
+        if entry.annotation
+          lines << ""
+          lines << "What it did:"
+          lines << "  #{entry.annotation}"
+        end
+
+        if entry.undo_command
+          lines << ""
+          lines << "Undo command:"
+          lines << "  #{entry.undo_command.join(" ")}"
+        end
 
         if entry.stdout && !entry.stdout.empty?
+          lines << ""
           lines << "Output:"
           lines << "-" * [width - 4, 40].min
           lines << entry.stdout

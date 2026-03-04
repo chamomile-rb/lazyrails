@@ -6,61 +6,55 @@ module LazyRails
 
     def load_introspect_cmd
       project_dir = @project.dir
-      cmd(-> {
-        begin
-          script = Introspect::RUNNER_SCRIPT
-          result = CommandRunner.run("bin/rails runner #{script}", dir: project_dir)
+      cmd(lambda do
+        script = Introspect::RUNNER_SCRIPT
+        result = CommandRunner.run("bin/rails runner #{script}", dir: project_dir)
 
-          if result.success?
-            data = Introspect.load(result.stdout)
-            IntrospectLoadedMsg.new(data: data, error: nil)
-          else
-            IntrospectLoadedMsg.new(data: nil, error: result.stderr)
-          end
-        rescue => e
-          IntrospectLoadedMsg.new(data: nil, error: e.message)
+        if result.success?
+          data = Introspect.load(result.stdout)
+          IntrospectLoadedMsg.new(data: data, error: nil)
+        else
+          IntrospectLoadedMsg.new(data: nil, error: result.stderr)
         end
-      })
+      rescue => e
+        IntrospectLoadedMsg.new(data: nil, error: e.message)
+      end)
     end
 
     def load_gems_cmd
       project_dir = @project.dir
-      cmd(-> {
-        begin
-          lockfile = File.join(project_dir, "Gemfile.lock")
-          gems = Parsers::GemfileLock.parse(lockfile)
-          GemsLoadedMsg.new(gems: gems, error: nil)
-        rescue => e
-          GemsLoadedMsg.new(gems: [], error: e.message)
-        end
-      })
+      cmd(lambda do
+        lockfile = File.join(project_dir, "Gemfile.lock")
+        gems = Parsers::GemfileLock.parse(lockfile)
+        GemsLoadedMsg.new(gems: gems, error: nil)
+      rescue => e
+        GemsLoadedMsg.new(gems: [], error: e.message)
+      end)
     end
 
     def load_tests_cmd
       project_dir = @project.dir
-      cmd(-> {
-        begin
-          files = []
-          test_dir = File.join(project_dir, "test")
-          spec_dir = File.join(project_dir, "spec")
+      cmd(lambda do
+        files = []
+        test_dir = File.join(project_dir, "test")
+        spec_dir = File.join(project_dir, "spec")
 
-          if File.directory?(spec_dir)
-            Dir.glob("#{spec_dir}/**/*_spec.rb").sort.each do |f|
-              files << TestFile.new(path: f.sub("#{project_dir}/", ""))
-            end
+        if File.directory?(spec_dir)
+          Dir.glob("#{spec_dir}/**/*_spec.rb").sort.each do |f|
+            files << TestFile.new(path: f.sub("#{project_dir}/", ""))
           end
-
-          if File.directory?(test_dir)
-            Dir.glob("#{test_dir}/**/*_test.rb").sort.each do |f|
-              files << TestFile.new(path: f.sub("#{project_dir}/", ""))
-            end
-          end
-
-          TestsLoadedMsg.new(files: files, error: nil)
-        rescue => e
-          TestsLoadedMsg.new(files: [], error: e.message)
         end
-      })
+
+        if File.directory?(test_dir)
+          Dir.glob("#{test_dir}/**/*_test.rb").sort.each do |f|
+            files << TestFile.new(path: f.sub("#{project_dir}/", ""))
+          end
+        end
+
+        TestsLoadedMsg.new(files: files, error: nil)
+      rescue => e
+        TestsLoadedMsg.new(files: [], error: e.message)
+      end)
     end
 
     def run_rails_cmd(command, panel_type)
@@ -90,39 +84,127 @@ module LazyRails
       @table_browser.loading!
       project_dir = @project.dir
       script = TableBrowser::QUERY_SCRIPT
-      cmd(-> {
-        begin
-          result = CommandRunner.run(["bin/rails", "runner", script, table_name], dir: project_dir)
-          if result.success?
-            data = JSON.parse(result.stdout, symbolize_names: false)
-            if data["error"]
-              TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], error: data["error"])
-            else
-              TableRowsLoadedMsg.new(table: table_name, columns: data["columns"], rows: data["rows"], error: nil)
-            end
+      cmd(lambda do
+        result = CommandRunner.run(["bin/rails", "runner", script, table_name], dir: project_dir)
+        if result.success?
+          data = JSON.parse(result.stdout, symbolize_names: false)
+          if data["error"]
+            TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], error: data["error"])
           else
-            TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], error: result.stderr)
+            TableRowsLoadedMsg.new(table: table_name, columns: data["columns"], rows: data["rows"], error: nil)
           end
-        rescue => e
-          TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], error: e.message)
+        else
+          TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], error: result.stderr)
         end
-      })
+      rescue => e
+        TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], error: e.message)
+      end)
+    end
+
+    def run_eval_cmd(expression)
+      project_dir = @project.dir
+      cmd(lambda do
+        script = "puts (#{expression}).inspect"
+        result = CommandRunner.run(
+          ["bin/rails", "runner", "-e", "development", script],
+          dir: project_dir
+        )
+        entry = EvalEntry.new(
+          expression: expression,
+          result: result.success? ? result.stdout.strip : nil,
+          error: result.success? ? nil : result.stderr.strip,
+          duration_ms: result.duration_ms
+        )
+        EvalFinishedMsg.new(entry: entry)
+      rescue => e
+        entry = EvalEntry.new(expression: expression, result: nil, error: e.message, duration_ms: 0)
+        EvalFinishedMsg.new(entry: entry)
+      end)
+    end
+
+    def decrypt_credentials_cmd(credential_file)
+      project_dir = @project.dir
+      env = credential_file.environment.gsub(" (default)", "")
+      cmd(lambda do
+        args = ["bin/rails", "credentials:show"]
+        args += ["--environment", env] unless env == "development"
+        result = CommandRunner.run(args, dir: project_dir)
+        CredentialsLoadedMsg.new(
+          environment: credential_file.environment,
+          content: result.success? ? result.stdout : nil,
+          error: result.success? ? nil : result.stderr
+        )
+      rescue => e
+        CredentialsLoadedMsg.new(environment: credential_file.environment, content: nil, error: e.message)
+      end)
+    end
+
+    def load_mailers_cmd
+      project_dir = @project.dir
+      cmd(lambda do
+        preview_dirs = [
+          File.join(project_dir, "test/mailers/previews"),
+          File.join(project_dir, "spec/mailers/previews")
+        ].select { |d| Dir.exist?(d) }
+
+        previews = preview_dirs.flat_map do |dir|
+          Dir.glob(File.join(dir, "**/*_preview.rb")).flat_map do |file|
+            content = File.read(file)
+            mailer = File.basename(file, "_preview.rb").then do |n|
+              n.split("_").map(&:capitalize).join
+            end
+            methods = content.scan(/def\s+(\w+)/).flatten.reject { |m| m == "initialize" }
+            methods.map do |m|
+              MailerPreview.new(
+                mailer_class: mailer,
+                method_name: m,
+                preview_path: file
+              )
+            end
+          end
+        end
+
+        MailersLoadedMsg.new(previews: previews, error: nil)
+      rescue => e
+        MailersLoadedMsg.new(previews: [], error: e.message)
+      end)
+    end
+
+    def render_mailer_preview_cmd(preview)
+      project_dir = @project.dir
+      preview_path = preview.preview_path
+      mailer_class = preview.mailer_class
+      method_name = preview.method_name
+      cmd(lambda do
+        script = "require '#{preview_path}'; " \
+                 "mail = #{mailer_class}Preview.new.public_send(:#{method_name}); " \
+                 "puts JSON.generate({ subject: mail.subject, to: mail.to, from: mail.from, " \
+                 "body: mail.body.decoded.gsub(/<[^>]+>/, '').squeeze(' ').strip })"
+        result = CommandRunner.run(["bin/rails", "runner", script], dir: project_dir)
+        if result.success?
+          data = JSON.parse(result.stdout, symbolize_names: true)
+          MailerPreviewLoadedMsg.new(preview: preview, error: nil, **data)
+        else
+          MailerPreviewLoadedMsg.new(preview: preview, subject: nil, to: nil,
+                                    from: nil, body: nil, error: result.stderr)
+        end
+      rescue => e
+        MailerPreviewLoadedMsg.new(preview: preview, subject: nil, to: nil,
+                                  from: nil, body: nil, error: e.message)
+      end)
     end
 
     def open_gem_homepage(gem_entry)
       project_dir = @project.dir
       name = gem_entry.name
-      cmd(-> {
-        begin
-          result = CommandRunner.run(["bundle", "info", name], dir: project_dir)
-          if result.success? && (match = result.stdout.match(/Homepage:\s*(\S+)/))
-            Platform.open_url(match[1])
-          end
-        rescue
-          # Best-effort — ignore failures
+      cmd(lambda do
+        result = CommandRunner.run(["bundle", "info", name], dir: project_dir)
+        if result.success? && (match = result.stdout.match(/Homepage:\s*(\S+)/))
+          Platform.open_url(match[1])
         end
-        nil
-      })
+      rescue
+        # Best-effort — ignore failures
+      end)
     end
   end
 end

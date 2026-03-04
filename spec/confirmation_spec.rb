@@ -89,6 +89,32 @@ RSpec.describe LazyRails::Confirmation do
     end
   end
 
+  describe ".detect_tier" do
+    it "detects red tier for db:drop" do
+      expect(described_class.detect_tier("bin/rails db:drop")).to eq(:red)
+    end
+
+    it "detects yellow tier for db:rollback" do
+      expect(described_class.detect_tier("bin/rails db:rollback")).to eq(:yellow)
+    end
+
+    it "detects green tier for db:migrate" do
+      expect(described_class.detect_tier("bin/rails db:migrate")).to eq(:green)
+    end
+
+    it "handles array commands" do
+      expect(described_class.detect_tier(["bin/rails", "db:drop"])).to eq(:red)
+    end
+
+    it "detects yellow for bundle update without gem" do
+      expect(described_class.detect_tier("bundle update")).to eq(:yellow)
+    end
+
+    it "detects green for bundle update with gem" do
+      expect(described_class.detect_tier("bundle update rails")).to eq(:green)
+    end
+  end
+
   describe "#handle_key" do
     it "cancels on escape" do
       c = described_class.new(command: "bin/rails db:rollback")

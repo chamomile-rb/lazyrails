@@ -17,13 +17,17 @@ module LazyRails
       stderr = force_utf8(stderr)
 
       display_cmd = cmd.is_a?(Array) ? cmd.join(" ") : cmd
+      exit_code = status.exitstatus || 1
+      annotation, undo_command = CommandAnnotator.annotate(display_cmd, stdout, stderr, exit_code)
       CommandEntry.new(
         command: display_cmd,
-        exit_code: status.exitstatus || 1,
+        exit_code: exit_code,
         duration_ms: duration,
         timestamp: Time.now,
         stdout: stdout,
-        stderr: stderr
+        stderr: stderr,
+        annotation: annotation,
+        undo_command: undo_command
       )
     end
 

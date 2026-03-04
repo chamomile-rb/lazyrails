@@ -87,6 +87,12 @@ module LazyRails
         when :models   then Views::ModelsView.render_item(item, selected: selected, width: width)
         when :tests    then Views::TestsView.render_item(item, selected: selected, width: width)
         when :gems     then Views::GemsView.render_item(item, selected: selected, width: width)
+        when :rake     then Views::RakeView.render_item(item, selected: selected, width: width)
+        when :console  then Views::ConsoleView.render_item(item, selected: selected, width: width)
+        when :credentials then Views::CredentialsView.render_item(item, selected: selected, width: width)
+        when :logs     then Views::LogView.render_item(item, selected: selected, width: width)
+        when :mailers  then Views::MailerView.render_item(item, selected: selected, width: width)
+        when :custom   then Views::CustomCommandsView.render_item(item, selected: selected, width: width)
         else
           selected ? Flourish::Style.new.reverse.render(item.to_s) : item.to_s
         end
@@ -137,6 +143,18 @@ module LazyRails
         item ? Views::TestsView.render_detail(item, width: detail_width) : "Select a test file."
       when :gems
         item ? Views::GemsView.render_detail(item, width: detail_width) : "Select a gem."
+      when :rake
+        item ? Views::RakeView.render_detail(item, width: detail_width) : "Select a rake task."
+      when :console
+        item ? Views::ConsoleView.render_detail(item, width: detail_width) : "Press e to evaluate a Ruby expression."
+      when :credentials
+        render_credentials_detail(item, detail_width)
+      when :logs
+        item ? Views::LogView.render_detail(item, width: detail_width) : "Waiting for log entries..."
+      when :mailers
+        render_mailer_detail(item, detail_width)
+      when :custom
+        item ? Views::CustomCommandsView.render_detail(item, width: detail_width) : "Select a command."
       else
         ""
       end
@@ -171,6 +189,24 @@ module LazyRails
 
     def render_help
       Views::HelpView.render(width: @width, height: @height)
+    end
+
+    def render_credentials_detail(item, width)
+      return "Select a credential file." unless item
+      if @credentials_content
+        Views::CredentialsView.render_detail_content(item, @credentials_content, width: width)
+      else
+        Views::CredentialsView.render_detail(item, width: width)
+      end
+    end
+
+    def render_mailer_detail(item, width)
+      return "Select a mailer preview." unless item
+      if @mailer_preview_content
+        Views::MailerView.render_detail_content(item, @mailer_preview_content, width: width)
+      else
+        Views::MailerView.render_detail(item, width: width)
+      end
     end
 
     def inject_title(top_line, styled_title, title_visible_len)
