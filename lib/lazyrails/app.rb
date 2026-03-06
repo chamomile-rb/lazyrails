@@ -567,30 +567,30 @@ module LazyRails
         item = current_panel.selected_item
         if item && item.status == "failed" && item.fe_id
           start_confirmation("Retry job ##{item.id}?", tier: :yellow)
-          @pending_job_action = { action: :retry, fe_id: item.fe_id }
+          @pending_job_action = PendingJobAction.new(action: :retry, fe_id: item.fe_id)
         end
       when "d"
         item = current_panel.selected_item
         if item && item.status == "failed" && item.fe_id
           start_confirmation("Discard job ##{item.id}? This cannot be undone.", tier: :red)
-          @pending_job_action = { action: :discard, fe_id: item.fe_id }
+          @pending_job_action = PendingJobAction.new(action: :discard, fe_id: item.fe_id)
         end
       when "A"
         unless current_panel.items.empty?
           start_confirmation("Retry ALL failed jobs?", tier: :yellow)
-          @pending_job_action = { action: :retry_all }
+          @pending_job_action = PendingJobAction.new(action: :retry_all)
         end
       when "D"
         item = current_panel.selected_item
         if item && item.status == "scheduled"
           start_confirmation("Discard scheduled job ##{item.id}?", tier: :yellow)
-          @pending_job_action = { action: :discard_scheduled, job_id: item.id }
+          @pending_job_action = PendingJobAction.new(action: :discard_scheduled, job_id: item.id)
         end
       when "e"
         item = current_panel.selected_item
         if item && item.status == "scheduled"
           start_confirmation("Dispatch scheduled job ##{item.id} now?", tier: :green)
-          @pending_job_action = { action: :dispatch, job_id: item.id }
+          @pending_job_action = PendingJobAction.new(action: :dispatch, job_id: item.id)
         end
       when "f"
         filters = %w[all ready claimed failed scheduled blocked finished]
@@ -814,30 +814,30 @@ module LazyRails
         item = current_panel.selected_item
         if item && item.status == "failed" && item.fe_id
           start_confirmation("Retry job ##{item.id}?", tier: :yellow)
-          @pending_job_action = { action: :retry, fe_id: item.fe_id }
+          @pending_job_action = PendingJobAction.new(action: :retry, fe_id: item.fe_id)
         end
       when :jobs_discard
         item = current_panel.selected_item
         if item && item.status == "failed" && item.fe_id
           start_confirmation("Discard job ##{item.id}? This cannot be undone.", tier: :red)
-          @pending_job_action = { action: :discard, fe_id: item.fe_id }
+          @pending_job_action = PendingJobAction.new(action: :discard, fe_id: item.fe_id)
         end
       when :jobs_retry_all
         unless current_panel.items.empty?
           start_confirmation("Retry ALL failed jobs?", tier: :yellow)
-          @pending_job_action = { action: :retry_all }
+          @pending_job_action = PendingJobAction.new(action: :retry_all)
         end
       when :jobs_dispatch
         item = current_panel.selected_item
         if item && item.status == "scheduled"
           start_confirmation("Dispatch scheduled job ##{item.id} now?", tier: :green)
-          @pending_job_action = { action: :dispatch, job_id: item.id }
+          @pending_job_action = PendingJobAction.new(action: :dispatch, job_id: item.id)
         end
       when :jobs_discard_scheduled
         item = current_panel.selected_item
         if item && item.status == "scheduled"
           start_confirmation("Discard scheduled job ##{item.id}?", tier: :yellow)
-          @pending_job_action = { action: :discard_scheduled, job_id: item.id }
+          @pending_job_action = PendingJobAction.new(action: :discard_scheduled, job_id: item.id)
         end
       when :jobs_filter
         filters = %w[all ready claimed failed scheduled blocked]
@@ -989,14 +989,14 @@ module LazyRails
 
         # Special handling for job actions
         if @pending_job_action
-          job_action = @pending_job_action
+          pending = @pending_job_action
           @pending_job_action = nil
-          case job_action[:action]
-          when :retry          then return retry_job_cmd(job_action[:fe_id])
-          when :discard        then return discard_job_cmd(job_action[:fe_id])
+          case pending.action
+          when :retry          then return retry_job_cmd(pending.fe_id)
+          when :discard        then return discard_job_cmd(pending.fe_id)
           when :retry_all      then return retry_all_jobs_cmd
-          when :dispatch       then return dispatch_job_cmd(job_action[:job_id])
-          when :discard_scheduled then return discard_scheduled_job_cmd(job_action[:job_id])
+          when :dispatch       then return dispatch_job_cmd(pending.job_id)
+          when :discard_scheduled then return discard_scheduled_job_cmd(pending.job_id)
           end
         end
 

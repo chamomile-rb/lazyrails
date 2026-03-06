@@ -2,6 +2,9 @@
 
 # This script is executed via: bin/rails runner lib/lazyrails/table_query_runner.rb table_name [query_json]
 # It dumps rows from the given table as JSON to stdout.
+#
+# Note: WHERE and ORDER BY clauses are passed through as raw SQL. This is intentional —
+# lazyrails is a dev tool and the user already has full shell/console access.
 
 require "json"
 

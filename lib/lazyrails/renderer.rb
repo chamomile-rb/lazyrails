@@ -223,18 +223,7 @@ module LazyRails
     end
 
     def inject_title(top_line, styled_title, title_visible_len)
-      stripped = Flourish::ANSI.strip(top_line)
-      return top_line if stripped.length <= title_visible_len + 2
-
-      # Extract the leading ANSI escape sequences (border styling)
-      ansi_prefix = top_line[/\A((?:\e\[[0-9;]*m)*)/] || ""
-      reset = "\e[0m"
-
-      corner = stripped[0]
-      rest = stripped[(1 + title_visible_len)..]
-
-      # Preserve border styling: corner in border color, title with its own styling, rest in border color
-      "#{ansi_prefix}#{corner}#{reset}#{styled_title}#{ansi_prefix}#{rest}#{reset}"
+      ViewHelpers.inject_title(top_line, styled_title, title_visible_len)
     end
   end
 end

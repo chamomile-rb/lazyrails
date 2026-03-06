@@ -144,6 +144,12 @@ module LazyRails
     end
   end
 
+  PendingJobAction = Data.define(:action, :fe_id, :job_id) do
+    def initialize(action:, fe_id: nil, job_id: nil)
+      super
+    end
+  end
+
   # Messages for async data loading
   IntrospectLoadedMsg = Data.define(:data, :error)
   GemsLoadedMsg = Data.define(:gems, :error)

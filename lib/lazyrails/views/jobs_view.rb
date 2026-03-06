@@ -39,27 +39,26 @@ module LazyRails
         lines << Flourish::Style.new.bold.render(job.class_name)
         lines << ""
 
-        label_style = Flourish::Style.new.foreground("#888888")
-        lines << "#{label_style.render("ID:")}           #{job.id}"
-        lines << "#{label_style.render("Active Job:")}   #{job.active_job_id || "n/a"}"
-        lines << "#{label_style.render("Queue:")}        #{job.queue_name}"
-        lines << "#{label_style.render("Status:")}       #{job.status}"
-        lines << "#{label_style.render("Priority:")}     #{job.priority || "n/a"}"
-        lines << "#{label_style.render("Created:")}      #{job.created_at || "n/a"}"
+        lines << "ID:           #{job.id}"
+        lines << "Active Job:   #{job.active_job_id || "n/a"}"
+        lines << "Queue:        #{job.queue_name}"
+        lines << "Status:       #{job.status}"
+        lines << "Priority:     #{job.priority || "n/a"}"
+        lines << "Created:      #{job.created_at || "n/a"}"
 
         case job.status
         when "scheduled"
-          lines << "#{label_style.render("Scheduled At:")} #{job.scheduled_at || "n/a"}"
+          lines << "Scheduled At: #{job.scheduled_at || "n/a"}"
         when "claimed"
-          lines << "#{label_style.render("Worker ID:")}    #{job.worker_id || "n/a"}"
-          lines << "#{label_style.render("Started At:")}   #{job.started_at || "n/a"}"
+          lines << "Worker ID:    #{job.worker_id || "n/a"}"
+          lines << "Started At:   #{job.started_at || "n/a"}"
         when "finished"
-          lines << "#{label_style.render("Finished At:")}  #{job.finished_at || "n/a"}"
+          lines << "Finished At:  #{job.finished_at || "n/a"}"
         when "blocked"
-          lines << "#{label_style.render("Concurrency:")}  #{job.concurrency_key || "n/a"}"
-          lines << "#{label_style.render("Expires At:")}   #{job.expires_at || "n/a"}"
+          lines << "Concurrency:  #{job.concurrency_key || "n/a"}"
+          lines << "Expires At:   #{job.expires_at || "n/a"}"
         when "failed"
-          lines << "#{label_style.render("Failed At:")}    #{job.failed_at || "n/a"}"
+          lines << "Failed At:    #{job.failed_at || "n/a"}"
         end
 
         # Arguments

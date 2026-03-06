@@ -200,35 +200,23 @@ module LazyRails
     def load_jobs_cmd(filter = "all")
       project_dir = @project.dir
       script = File.expand_path("jobs_query_runner.rb", __dir__)
+      params = { "status" => filter, "limit" => 200 }
 
-      # First get stats, then list jobs for the current filter
       cmd(lambda do
-        # Get stats
-        stats_result = CommandRunner.run(["bin/rails", "runner", script, "stats"], dir: project_dir)
-        if stats_result.success?
-          stats_data = JSON.parse(stats_result.stdout, symbolize_names: false)
-          if stats_data["available"] == false
-            return JobsLoadedMsg.new(available: false, jobs: [], counts: {}, error: nil)
-          end
-        else
-          return JobsLoadedMsg.new(available: true, jobs: [], counts: {}, error: stats_result.stderr)
-        end
-
-        counts = (stats_data["counts"] || {}).transform_keys(&:to_sym)
-
-        # Get job list for current filter
-        list_params = { "status" => filter, "limit" => 200 }
-        list_result = CommandRunner.run(
-          ["bin/rails", "runner", script, "list", JSON.generate(list_params)],
+        result = CommandRunner.run(
+          ["bin/rails", "runner", script, "stats_and_list", JSON.generate(params)],
           dir: project_dir
         )
 
-        if list_result.success?
-          list_data = JSON.parse(list_result.stdout, symbolize_names: false)
-          jobs = (list_data["jobs"] || []).map { |j| parse_job_entry(j) }
+        if result.success?
+          data = JSON.parse(result.stdout, symbolize_names: false)
+          return JobsLoadedMsg.new(available: false, jobs: [], counts: {}, error: nil) if data["available"] == false
+
+          counts = (data["counts"] || {}).transform_keys(&:to_sym)
+          jobs = (data["jobs"] || []).map { |j| parse_job_entry(j) }
           JobsLoadedMsg.new(available: true, jobs: jobs, counts: counts, error: nil)
         else
-          JobsLoadedMsg.new(available: true, jobs: [], counts: counts, error: list_result.stderr)
+          JobsLoadedMsg.new(available: true, jobs: [], counts: {}, error: result.stderr)
         end
       rescue => e
         JobsLoadedMsg.new(available: true, jobs: [], counts: {}, error: e.message)

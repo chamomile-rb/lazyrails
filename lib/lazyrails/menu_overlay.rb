@@ -89,14 +89,7 @@ module LazyRails
       if box_lines.any?
         title_text = " #{@title} "
         title_styled = Flourish::Style.new.foreground("#7d56f4").bold.render(title_text)
-        stripped = Flourish::ANSI.strip(box_lines[0])
-        if stripped.length > title_text.length + 2
-          ansi_prefix = box_lines[0][/\A((?:\e\[[0-9;]*m)*)/] || ""
-          reset = "\e[0m"
-          corner = stripped[0]
-          rest = stripped[(1 + title_text.length)..]
-          box_lines[0] = "#{ansi_prefix}#{corner}#{reset}#{title_styled}#{ansi_prefix}#{rest}#{reset}"
-        end
+        box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
       end
 
       # Center the box in the viewport
