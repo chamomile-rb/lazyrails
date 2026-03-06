@@ -7,10 +7,12 @@ module LazyRails
     def self.run(cmd, dir:, env: {})
       env = env.merge("DISABLE_SPRING" => "1")
       start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      stdout, stderr, status = if cmd.is_a?(Array)
-        Open3.capture3(env, *cmd, chdir: dir)
-      else
-        Open3.capture3(env, cmd, chdir: dir)
+      stdout, stderr, status = Bundler.with_unbundled_env do
+        if cmd.is_a?(Array)
+          Open3.capture3(env, *cmd, chdir: dir)
+        else
+          Open3.capture3(env, cmd, chdir: dir)
+        end
       end
       duration = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000).round
       stdout = force_utf8(stdout)
@@ -33,10 +35,12 @@ module LazyRails
 
     def self.stream(cmd, dir:, env: {}, &block)
       env = env.merge("DISABLE_SPRING" => "1")
-      Open3.popen2e(env, cmd, chdir: dir) do |stdin, output, wait_thr|
-        stdin.close
-        output.each_line { |line| block.call(force_utf8(line)) }
-        wait_thr.value
+      Bundler.with_unbundled_env do
+        Open3.popen2e(env, cmd, chdir: dir) do |stdin, output, wait_thr|
+          stdin.close
+          output.each_line { |line| block.call(force_utf8(line)) }
+          wait_thr.value
+        end
       end
     end
 

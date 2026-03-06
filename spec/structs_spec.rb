@@ -114,4 +114,16 @@ RSpec.describe "New structs" do
       expect(entry.to_s).to include("\u2717")
     end
   end
+
+  describe LazyRails::TableRowsLoadedMsg do
+    it "includes total field" do
+      msg = described_class.new(table: "users", columns: ["id"], rows: [["1"]], total: 42, error: nil)
+      expect(msg.total).to eq(42)
+    end
+
+    it "includes error field" do
+      msg = described_class.new(table: "users", columns: [], rows: [], total: 0, error: "bad SQL")
+      expect(msg.error).to eq("bad SQL")
+    end
+  end
 end

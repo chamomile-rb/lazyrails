@@ -14,20 +14,22 @@ module LazyRails
         state = server_manager.state
         icon = STATE_ICONS[state]
         port = server_manager.port
+        mode = server_manager.uses_bin_dev? ? "bin/dev" : "rails server"
 
         lines = []
         case state
         when :running
-          lines << "#{icon} Running :#{port}"
+          lines << "#{icon} Running :#{port} (#{mode})"
           lines << "PID: #{server_manager.pid}" if server_manager.pid
+          lines << "S stop \u2502 r restart"
         when :starting
           lines << "#{icon} Starting :#{port}..."
         when :stopped
           lines << "#{icon} Stopped"
-          lines << "Press 's' to start"
+          lines << "s start \u2502 p change port"
         when :error
           lines << "#{icon} Error"
-          lines << "Press 's' to retry"
+          lines << "s retry \u2502 p change port"
         end
 
         lines.join("\n")

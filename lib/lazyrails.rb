@@ -30,6 +30,7 @@ require_relative "lazyrails/log_watcher"
 # Component objects
 require_relative "lazyrails/flash"
 require_relative "lazyrails/command_log_overlay"
+require_relative "lazyrails/menu_overlay"
 require_relative "lazyrails/table_browser"
 require_relative "lazyrails/input_mode"
 
@@ -61,6 +62,7 @@ require_relative "lazyrails/views/console_view"
 require_relative "lazyrails/views/credentials_view"
 require_relative "lazyrails/views/log_view"
 require_relative "lazyrails/views/mailer_view"
+require_relative "lazyrails/views/jobs_view"
 
 # App modules (stateless utilities)
 require_relative "lazyrails/renderer"

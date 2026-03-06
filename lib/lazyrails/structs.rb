@@ -127,14 +127,33 @@ module LazyRails
     end
   end
 
+  JobEntry = Data.define(:id, :fe_id, :class_name, :queue_name, :status, :priority,
+                         :active_job_id, :arguments, :error_class, :error_message,
+                         :backtrace, :worker_id, :started_at, :scheduled_at,
+                         :finished_at, :failed_at, :concurrency_key, :expires_at,
+                         :created_at) do
+    def initialize(fe_id: nil, priority: nil, active_job_id: nil, error_class: nil,
+                   error_message: nil, backtrace: nil, worker_id: nil, started_at: nil,
+                   scheduled_at: nil, finished_at: nil, failed_at: nil,
+                   concurrency_key: nil, expires_at: nil, created_at: nil, **kwargs)
+      super
+    end
+
+    def to_s
+      "#{class_name}  #{queue_name}  [#{status}]"
+    end
+  end
+
   # Messages for async data loading
   IntrospectLoadedMsg = Data.define(:data, :error)
   GemsLoadedMsg = Data.define(:gems, :error)
   TestsLoadedMsg = Data.define(:files, :error)
   CommandFinishedMsg = Data.define(:entry, :panel)
-  TableRowsLoadedMsg = Data.define(:table, :columns, :rows, :error)
+  TableRowsLoadedMsg = Data.define(:table, :columns, :rows, :total, :error)
   EvalFinishedMsg = Data.define(:entry)
   CredentialsLoadedMsg = Data.define(:environment, :content, :error)
   MailersLoadedMsg = Data.define(:previews, :error)
   MailerPreviewLoadedMsg = Data.define(:preview, :subject, :to, :from, :body, :error)
+  JobsLoadedMsg = Data.define(:available, :jobs, :counts, :error)
+  JobActionMsg = Data.define(:action, :job_id, :success, :error)
 end

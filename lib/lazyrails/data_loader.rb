@@ -84,20 +84,23 @@ module LazyRails
       @table_browser.loading!
       project_dir = @project.dir
       script = TableBrowser::QUERY_SCRIPT
+      query_json = JSON.generate(@table_browser.current_query_params)
+      args = ["bin/rails", "runner", script, table_name, query_json]
       cmd(lambda do
-        result = CommandRunner.run(["bin/rails", "runner", script, table_name], dir: project_dir)
+        result = CommandRunner.run(args, dir: project_dir)
         if result.success?
           data = JSON.parse(result.stdout, symbolize_names: false)
           if data["error"]
-            TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], error: data["error"])
+            TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], total: 0, error: data["error"])
           else
-            TableRowsLoadedMsg.new(table: table_name, columns: data["columns"], rows: data["rows"], error: nil)
+            TableRowsLoadedMsg.new(table: table_name, columns: data["columns"], rows: data["rows"],
+                                   total: data["total"] || 0, error: nil)
           end
         else
-          TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], error: result.stderr)
+          TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], total: 0, error: result.stderr)
         end
       rescue => e
-        TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], error: e.message)
+        TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], total: 0, error: e.message)
       end)
     end
 
@@ -192,6 +195,112 @@ module LazyRails
         MailerPreviewLoadedMsg.new(preview: preview, subject: nil, to: nil,
                                   from: nil, body: nil, error: e.message)
       end)
+    end
+
+    def load_jobs_cmd(filter = "all")
+      project_dir = @project.dir
+      script = File.expand_path("jobs_query_runner.rb", __dir__)
+
+      # First get stats, then list jobs for the current filter
+      cmd(lambda do
+        # Get stats
+        stats_result = CommandRunner.run(["bin/rails", "runner", script, "stats"], dir: project_dir)
+        if stats_result.success?
+          stats_data = JSON.parse(stats_result.stdout, symbolize_names: false)
+          if stats_data["available"] == false
+            return JobsLoadedMsg.new(available: false, jobs: [], counts: {}, error: nil)
+          end
+        else
+          return JobsLoadedMsg.new(available: true, jobs: [], counts: {}, error: stats_result.stderr)
+        end
+
+        counts = (stats_data["counts"] || {}).transform_keys(&:to_sym)
+
+        # Get job list for current filter
+        list_params = { "status" => filter, "limit" => 200 }
+        list_result = CommandRunner.run(
+          ["bin/rails", "runner", script, "list", JSON.generate(list_params)],
+          dir: project_dir
+        )
+
+        if list_result.success?
+          list_data = JSON.parse(list_result.stdout, symbolize_names: false)
+          jobs = (list_data["jobs"] || []).map { |j| parse_job_entry(j) }
+          JobsLoadedMsg.new(available: true, jobs: jobs, counts: counts, error: nil)
+        else
+          JobsLoadedMsg.new(available: true, jobs: [], counts: counts, error: list_result.stderr)
+        end
+      rescue => e
+        JobsLoadedMsg.new(available: true, jobs: [], counts: {}, error: e.message)
+      end)
+    end
+
+    def retry_job_cmd(fe_id)
+      run_job_action_cmd("retry", fe_id)
+    end
+
+    def discard_job_cmd(fe_id)
+      run_job_action_cmd("discard", fe_id)
+    end
+
+    def retry_all_jobs_cmd(filter: nil, queue: nil)
+      project_dir = @project.dir
+      script = File.expand_path("jobs_query_runner.rb", __dir__)
+      params = {}
+      params["class_name"] = filter if filter
+      params["queue"] = queue if queue
+      cmd(lambda do
+        result = CommandRunner.run(
+          ["bin/rails", "runner", script, "retry_all", JSON.generate(params)],
+          dir: project_dir
+        )
+        if result.success?
+          data = JSON.parse(result.stdout, symbolize_names: false)
+          JobActionMsg.new(action: "retry_all", job_id: nil, success: data["success"], error: data["error"])
+        else
+          JobActionMsg.new(action: "retry_all", job_id: nil, success: false, error: result.stderr)
+        end
+      rescue => e
+        JobActionMsg.new(action: "retry_all", job_id: nil, success: false, error: e.message)
+      end)
+    end
+
+    def dispatch_job_cmd(job_id)
+      run_job_action_cmd("dispatch", job_id)
+    end
+
+    def discard_scheduled_job_cmd(job_id)
+      run_job_action_cmd("discard_scheduled", job_id)
+    end
+
+    def run_job_action_cmd(action, id)
+      project_dir = @project.dir
+      script = File.expand_path("jobs_query_runner.rb", __dir__)
+      cmd(lambda do
+        result = CommandRunner.run(["bin/rails", "runner", script, action, id.to_s], dir: project_dir)
+        if result.success?
+          data = JSON.parse(result.stdout, symbolize_names: false)
+          JobActionMsg.new(action: action, job_id: id, success: data["success"], error: data["error"])
+        else
+          JobActionMsg.new(action: action, job_id: id, success: false, error: result.stderr)
+        end
+      rescue => e
+        JobActionMsg.new(action: action, job_id: id, success: false, error: e.message)
+      end)
+    end
+
+    def parse_job_entry(j)
+      JobEntry.new(
+        id: j["id"], fe_id: j["fe_id"], class_name: j["class_name"],
+        queue_name: j["queue_name"], status: j["status"], priority: j["priority"],
+        active_job_id: j["active_job_id"], arguments: j["arguments"],
+        error_class: j["error_class"], error_message: j["error_message"],
+        backtrace: j["backtrace"], worker_id: j["worker_id"],
+        started_at: j["started_at"], scheduled_at: j["scheduled_at"],
+        finished_at: j["finished_at"], failed_at: j["failed_at"],
+        concurrency_key: j["concurrency_key"], expires_at: j["expires_at"],
+        created_at: j["created_at"]
+      )
     end
 
     def open_gem_homepage(gem_entry)

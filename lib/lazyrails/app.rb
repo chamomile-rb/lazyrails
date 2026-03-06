@@ -10,6 +10,17 @@ module LazyRails
     include Renderer
     include DataLoader
 
+    GENERATOR_TYPES = [
+      { type: "model",      label: "Model",      placeholder: "User name:string email:string" },
+      { type: "migration",  label: "Migration",  placeholder: "AddStatusToOrders status:integer" },
+      { type: "controller", label: "Controller", placeholder: "Articles index show" },
+      { type: "scaffold",   label: "Scaffold",   placeholder: "Post title:string body:text" },
+      { type: "job",        label: "Job",        placeholder: "ProcessPayment" },
+      { type: "mailer",     label: "Mailer",     placeholder: "UserMailer welcome reset_password" },
+      { type: "channel",    label: "Channel",    placeholder: "Chat" },
+      { type: "stimulus",   label: "Stimulus",   placeholder: "toggle" }
+    ].freeze
+
     PANEL_DEFS = [
       { type: :status,   title: "Status" },
       { type: :server,   title: "Server" },
@@ -22,11 +33,10 @@ module LazyRails
       { type: :console,  title: "Console" },
       { type: :credentials, title: "Credentials" },
       { type: :logs,     title: "Logs" },
-      { type: :mailers,  title: "Mailers" }
+      { type: :mailers,  title: "Mailers" },
+      { type: :jobs,     title: "Jobs" }
     ].freeze
 
-    FOCUSED_COLOR = "#7d56f4"
-    UNFOCUSED_COLOR = "#444444"
     LEFT_WIDTH_RATIO = 0.30
     UI_TICK_SECONDS = 1.0
 
@@ -50,6 +60,7 @@ module LazyRails
       # Component objects
       @flash = Flash.new
       @command_log_overlay = CommandLogOverlay.new(@command_log)
+      @menu = MenuOverlay.new
       @table_browser = TableBrowser.new
       @input_mode = InputMode.new
 
@@ -69,6 +80,10 @@ module LazyRails
       @confirmation = nil
       @route_grouped = false
       @last_server_state = :stopped
+      @jobs_filter = "all"
+      @jobs_available = nil
+      @jobs_tick_counter = 0
+      @pending_job_action = nil
 
       # Caches
       @detail_content = ""
@@ -84,6 +99,12 @@ module LazyRails
         custom_panel.finish_loading(items: @config.custom_commands) if custom_panel
       end
 
+      # These panels are event-driven, not loaded from a command
+      find_panel(:server)&.finish_loading(items: [])
+      find_panel(:console)&.finish_loading(items: [])
+      find_panel(:logs)&.finish_loading(items: [])
+      find_panel(:jobs)&.finish_loading(items: [])
+
       # Discover credential files (no subprocess needed)
       discover_credentials
 
@@ -95,6 +116,7 @@ module LazyRails
         load_gems_cmd,
         load_tests_cmd,
         load_mailers_cmd,
+        load_jobs_cmd(@jobs_filter),
         ui_tick
       )
     end
@@ -135,6 +157,10 @@ module LazyRails
         handle_mailers_loaded(msg)
       when MailerPreviewLoadedMsg
         handle_mailer_preview_loaded(msg)
+      when JobsLoadedMsg
+        handle_jobs_loaded(msg)
+      when JobActionMsg
+        return handle_job_action(msg)
       end
 
       nil
@@ -144,6 +170,7 @@ module LazyRails
       return render_help if @show_help
       return @command_log_overlay.render(width: @width) if @command_log_overlay.visible?
       return @table_browser.render(width: @width, height: @height) if @table_browser.visible?
+      return @menu.render(width: @width, height: @height) if @menu.visible?
 
       left_width = (@width * LEFT_WIDTH_RATIO).to_i
       right_width = @width - left_width - 1
@@ -272,6 +299,14 @@ module LazyRails
         return nil
       end
 
+      # Menu overlay intercepts all keys
+      if @menu.visible?
+        result = @menu.handle_key(msg.key)
+        return shutdown if result == :quit
+        return handle_menu_action(result) if result && result != :quit
+        return nil
+      end
+
       # Table browser overlay intercepts all keys
       if @table_browser.visible?
         signal = @table_browser.handle_key(msg.key)
@@ -279,7 +314,14 @@ module LazyRails
         when :quit  then return shutdown
         when :close then @table_browser.hide
         when Hash
-          return load_table_rows_cmd(signal[:table]) if signal[:action] == :load_table
+          case signal[:action]
+          when :load_table
+            return load_table_rows_cmd(signal[:table])
+          when :input_where
+            @input_mode.start_input(:table_where, prompt: "WHERE: ", placeholder: "id > 5 AND name LIKE '%test%'")
+          when :input_order
+            @input_mode.start_input(:table_order, prompt: "ORDER BY: ", placeholder: "created_at DESC")
+          end
         end
         return nil
       end
@@ -299,9 +341,13 @@ module LazyRails
         @show_help = true
       when "L"
         @command_log_overlay.show
-      when :tab
+      when :tab, :right, "l"
         clear_panel_state
         @focused_panel = (@focused_panel + 1) % @panels.size
+        update_detail_content
+      when :left, "h"
+        clear_panel_state
+        @focused_panel = (@focused_panel - 1) % @panels.size
         update_detail_content
       when "1".."9"
         idx = msg.key.to_i - 1
@@ -319,6 +365,10 @@ module LazyRails
         return handle_enter
       when "/"
         start_filter
+      when "G"
+        show_generator_menu
+      when "x"
+        show_panel_menu
       when "R"
         return handle_refresh
       when "z"
@@ -343,6 +393,7 @@ module LazyRails
       when :credentials then handle_credentials_key(msg)
       when :logs     then handle_logs_key(msg)
       when :mailers  then handle_mailers_key(msg)
+      when :jobs     then handle_jobs_key(msg)
       when :custom   then handle_custom_key(msg)
       end
     end
@@ -351,7 +402,8 @@ module LazyRails
       case msg.key
       when "s"
         @server.start
-        set_flash("Starting server on port #{@server.port}...")
+        mode = @server.uses_bin_dev? ? "bin/dev" : "rails server"
+        set_flash("Starting #{mode} on port #{@server.port}...")
       when "S"
         @server.stop
         set_flash("Server stopped.")
@@ -509,6 +561,47 @@ module LazyRails
       nil
     end
 
+    def handle_jobs_key(msg)
+      case msg.key
+      when "r"
+        item = current_panel.selected_item
+        if item && item.status == "failed" && item.fe_id
+          start_confirmation("Retry job ##{item.id}?", tier: :yellow)
+          @pending_job_action = { action: :retry, fe_id: item.fe_id }
+        end
+      when "d"
+        item = current_panel.selected_item
+        if item && item.status == "failed" && item.fe_id
+          start_confirmation("Discard job ##{item.id}? This cannot be undone.", tier: :red)
+          @pending_job_action = { action: :discard, fe_id: item.fe_id }
+        end
+      when "A"
+        unless current_panel.items.empty?
+          start_confirmation("Retry ALL failed jobs?", tier: :yellow)
+          @pending_job_action = { action: :retry_all }
+        end
+      when "D"
+        item = current_panel.selected_item
+        if item && item.status == "scheduled"
+          start_confirmation("Discard scheduled job ##{item.id}?", tier: :yellow)
+          @pending_job_action = { action: :discard_scheduled, job_id: item.id }
+        end
+      when "e"
+        item = current_panel.selected_item
+        if item && item.status == "scheduled"
+          start_confirmation("Dispatch scheduled job ##{item.id} now?", tier: :green)
+          @pending_job_action = { action: :dispatch, job_id: item.id }
+        end
+      when "f"
+        filters = %w[all ready claimed failed scheduled blocked finished]
+        idx = filters.index(@jobs_filter) || 0
+        @jobs_filter = filters[(idx + 1) % filters.size]
+        set_flash("Jobs filter: #{@jobs_filter}")
+        return load_jobs_cmd(@jobs_filter)
+      end
+      nil
+    end
+
     def handle_console_key(msg)
       case msg.key
       when "e"
@@ -528,6 +621,245 @@ module LazyRails
       if msg.key == item.key
         start_confirmation(item.command.split, tier: item.confirmation_tier)
       end
+      nil
+    end
+
+    def show_generator_menu
+      items = GENERATOR_TYPES.map do |gt|
+        MenuOverlay::MenuItem.new(
+          label: gt[:label],
+          key: nil,
+          action: :"generate_#{gt[:type]}"
+        )
+      end
+      @menu.show(title: "Generate", items: items)
+    end
+
+    def show_panel_menu # rubocop:disable Metrics/MethodLength
+      items = case current_panel.type
+      when :server
+        state = @server.state
+        menu = []
+        if state == :running
+          menu << MenuOverlay::MenuItem.new(label: "Stop server", key: "S", action: :server_stop)
+          menu << MenuOverlay::MenuItem.new(label: "Restart server", key: "r", action: :server_restart)
+        else
+          menu << MenuOverlay::MenuItem.new(label: "Start server", key: "s", action: :server_start)
+        end
+        menu << MenuOverlay::MenuItem.new(label: "Change port", key: "p", action: :server_port)
+        menu
+      when :database
+        [
+          MenuOverlay::MenuItem.new(label: "Run migrations", key: "m", action: :db_migrate),
+          MenuOverlay::MenuItem.new(label: "Rollback migration", key: "M", action: :db_rollback),
+          MenuOverlay::MenuItem.new(label: "Create migration", key: "c", action: :db_create_migration),
+          MenuOverlay::MenuItem.new(label: "Browse tables", key: "t", action: :db_browse_tables),
+          MenuOverlay::MenuItem.new(label: "Migrate down (selected)", key: "d", action: :db_migrate_down),
+          MenuOverlay::MenuItem.new(label: "Migrate up (selected)", key: "u", action: :db_migrate_up)
+        ]
+      when :tests
+        [
+          MenuOverlay::MenuItem.new(label: "Run selected test", key: nil, action: :test_run_selected),
+          MenuOverlay::MenuItem.new(label: "Run all tests", key: "a", action: :test_run_all),
+          MenuOverlay::MenuItem.new(label: "Run failed tests", key: "f", action: :test_run_failed)
+        ]
+      when :gems
+        [
+          MenuOverlay::MenuItem.new(label: "Update selected gem", key: "u", action: :gem_update),
+          MenuOverlay::MenuItem.new(label: "Update all gems", key: "U", action: :gem_update_all),
+          MenuOverlay::MenuItem.new(label: "Open homepage", key: "o", action: :gem_open)
+        ]
+      when :routes
+        [
+          MenuOverlay::MenuItem.new(label: "Toggle grouping", key: "g", action: :routes_toggle_group)
+        ]
+      when :models
+        [
+          MenuOverlay::MenuItem.new(label: "Generate model", key: "g", action: :model_generate)
+        ]
+      when :console
+        [
+          MenuOverlay::MenuItem.new(label: "Evaluate expression", key: "e", action: :console_eval),
+          MenuOverlay::MenuItem.new(label: "Open Rails console", key: "X", action: :console_open)
+        ]
+      when :credentials
+        [
+          MenuOverlay::MenuItem.new(label: "Decrypt and view", key: nil, action: :credentials_decrypt),
+          MenuOverlay::MenuItem.new(label: "Edit credentials", key: "e", action: :credentials_edit)
+        ]
+      when :logs
+        [
+          MenuOverlay::MenuItem.new(label: "Filter slow requests", key: "s", action: :logs_filter_slow),
+          MenuOverlay::MenuItem.new(label: "Filter errors", key: "e", action: :logs_filter_errors),
+          MenuOverlay::MenuItem.new(label: "Clear logs", key: "c", action: :logs_clear)
+        ]
+      when :mailers
+        [
+          MenuOverlay::MenuItem.new(label: "Preview in browser", key: "o", action: :mailer_open)
+        ]
+      when :jobs
+        [
+          MenuOverlay::MenuItem.new(label: "Retry failed job", key: "r", action: :jobs_retry),
+          MenuOverlay::MenuItem.new(label: "Discard failed job", key: "d", action: :jobs_discard),
+          MenuOverlay::MenuItem.new(label: "Retry all failed", key: "A", action: :jobs_retry_all),
+          MenuOverlay::MenuItem.new(label: "Dispatch scheduled", key: "e", action: :jobs_dispatch),
+          MenuOverlay::MenuItem.new(label: "Discard scheduled", key: "D", action: :jobs_discard_scheduled),
+          MenuOverlay::MenuItem.new(label: "Cycle filter", key: "f", action: :jobs_filter),
+          MenuOverlay::MenuItem.new(label: "Refresh", key: "R", action: :jobs_refresh)
+        ]
+      else
+        []
+      end
+
+      return if items.empty?
+
+      @menu.show(title: current_panel.title, items: items)
+    end
+
+    def handle_menu_action(action) # rubocop:disable Metrics/MethodLength
+      case action
+      # Server
+      when :server_start
+        @server.start
+        mode = @server.uses_bin_dev? ? "bin/dev" : "rails server"
+        set_flash("Starting #{mode} on port #{@server.port}...")
+      when :server_stop
+        @server.stop
+        set_flash("Server stopped.")
+      when :server_restart
+        @server.restart
+        set_flash("Restarting server...")
+      when :server_port
+        @input_mode.start_input(:change_port, prompt: "Port: ", placeholder: "3000")
+
+      # Database
+      when :db_migrate      then return run_rails_cmd("bin/rails db:migrate", :database)
+      when :db_rollback     then start_confirmation("bin/rails db:rollback", tier: :yellow)
+      when :db_create_migration
+        @input_mode.start_input(:migration_name, prompt: "Migration name: ", placeholder: "CreateUsers")
+      when :db_browse_tables
+        if @introspect_data
+          @table_browser.show(@introspect_data.tables.keys)
+        else
+          set_flash("Data still loading...")
+        end
+      when :db_migrate_down
+        migration = current_panel.selected_item
+        start_confirmation("bin/rails db:migrate:down VERSION=#{migration.version}", tier: :yellow) if migration
+      when :db_migrate_up
+        migration = current_panel.selected_item
+        return run_rails_cmd("bin/rails db:migrate:up VERSION=#{migration.version}", :database) if migration
+
+      # Tests
+      when :test_run_selected
+        item = current_panel.selected_item
+        return run_test_file_cmd(item) if item
+      when :test_run_all    then return run_rails_cmd(test_all_command, :tests)
+      when :test_run_failed then return run_rails_cmd(test_failed_command, :tests)
+
+      # Gems
+      when :gem_update
+        gem_entry = current_panel.selected_item
+        return run_rails_cmd(["bundle", "update", gem_entry.name], :gems) if gem_entry
+      when :gem_update_all  then start_confirmation("bundle update", tier: :yellow)
+      when :gem_open
+        gem_entry = current_panel.selected_item
+        return open_gem_homepage(gem_entry) if gem_entry
+
+      # Routes
+      when :routes_toggle_group then toggle_route_grouping
+
+      # Models
+      when :model_generate
+        @input_mode.start_input(:generate_model, prompt: "Model name: ", placeholder: "User name:string email:string")
+
+      # Console
+      when :console_eval
+        @input_mode.start_input(:eval_expression, prompt: "ruby> ", placeholder: "User.count")
+      when :console_open then return exec("bin/rails", "console")
+
+      # Credentials
+      when :credentials_decrypt then return decrypt_selected_credential
+      when :credentials_edit    then return exec("bin/rails", "credentials:edit")
+
+      # Logs
+      when :logs_filter_slow
+        panel = find_panel(:logs)
+        @log_filter = @log_filter == :slow ? nil : :slow
+        apply_log_filter(panel) if panel
+      when :logs_filter_errors
+        panel = find_panel(:logs)
+        @log_filter = @log_filter == :errors ? nil : :errors
+        apply_log_filter(panel) if panel
+      when :logs_clear
+        panel = find_panel(:logs)
+        if panel
+          @all_log_entries = []
+          @log_filter = nil
+          panel.finish_loading(items: [])
+          @log_watcher&.clear
+        end
+
+      # Mailers
+      when :mailer_open
+        item = current_panel.selected_item
+        if item && @server.running?
+          Platform.open_url("http://localhost:#{@server.port}/rails/mailers/#{item.mailer_class}/#{item.method_name}")
+        else
+          set_flash("Start the server first to open in browser")
+        end
+
+      # Jobs
+      when :jobs_retry
+        item = current_panel.selected_item
+        if item && item.status == "failed" && item.fe_id
+          start_confirmation("Retry job ##{item.id}?", tier: :yellow)
+          @pending_job_action = { action: :retry, fe_id: item.fe_id }
+        end
+      when :jobs_discard
+        item = current_panel.selected_item
+        if item && item.status == "failed" && item.fe_id
+          start_confirmation("Discard job ##{item.id}? This cannot be undone.", tier: :red)
+          @pending_job_action = { action: :discard, fe_id: item.fe_id }
+        end
+      when :jobs_retry_all
+        unless current_panel.items.empty?
+          start_confirmation("Retry ALL failed jobs?", tier: :yellow)
+          @pending_job_action = { action: :retry_all }
+        end
+      when :jobs_dispatch
+        item = current_panel.selected_item
+        if item && item.status == "scheduled"
+          start_confirmation("Dispatch scheduled job ##{item.id} now?", tier: :green)
+          @pending_job_action = { action: :dispatch, job_id: item.id }
+        end
+      when :jobs_discard_scheduled
+        item = current_panel.selected_item
+        if item && item.status == "scheduled"
+          start_confirmation("Discard scheduled job ##{item.id}?", tier: :yellow)
+          @pending_job_action = { action: :discard_scheduled, job_id: item.id }
+        end
+      when :jobs_filter
+        filters = %w[all ready claimed failed scheduled blocked]
+        idx = filters.index(@jobs_filter) || 0
+        @jobs_filter = filters[(idx + 1) % filters.size]
+        set_flash("Jobs filter: #{@jobs_filter}")
+        return load_jobs_cmd(@jobs_filter)
+      when :jobs_refresh
+        return load_jobs_cmd(@jobs_filter)
+
+      # Generators
+      else
+        gen_match = action.to_s.match(/\Agenerate_(.+)\z/)
+        if gen_match
+          gen_type = gen_match[1]
+          gt = GENERATOR_TYPES.find { |g| g[:type] == gen_type }
+          if gt
+            @input_mode.start_input(:"generate_#{gen_type}", prompt: "#{gt[:label]} args: ", placeholder: gt[:placeholder])
+          end
+        end
+      end
+
       nil
     end
 
@@ -560,7 +892,7 @@ module LazyRails
     # ─── Input mode (from InputHandler) ───────────────────
 
     def start_filter
-      return unless %i[routes models tests gems rake console logs mailers custom].include?(current_panel.type)
+      return unless %i[routes models tests gems rake console logs mailers jobs custom].include?(current_panel.type)
 
       @input_mode.start_filter
     end
@@ -603,6 +935,12 @@ module LazyRails
         return run_rails_cmd(%w[bin/rails generate model] + value.split, :models) unless value.empty?
       when :eval_expression
         return run_eval_cmd(value) unless value.empty?
+      when :table_where
+        @table_browser.set_where(value)
+        return load_table_rows_cmd(@table_browser.selected_table) if @table_browser.selected_table
+      when :table_order
+        @table_browser.set_order(value)
+        return load_table_rows_cmd(@table_browser.selected_table) if @table_browser.selected_table
       when :change_port
         port = value.to_i
         if port > 0 && port < 65_536
@@ -612,6 +950,13 @@ module LazyRails
           set_flash("Invalid port: #{value}")
         end
         nil
+      else
+        # Handle generator purposes (generate_model, generate_migration, etc.)
+        gen_match = purpose.to_s.match(/\Agenerate_(.+)\z/)
+        if gen_match && !value.empty?
+          gen_type = gen_match[1]
+          return run_rails_cmd(%W[bin/rails generate #{gen_type}] + value.split, :models)
+        end
       end
     end
 
@@ -642,9 +987,23 @@ module LazyRails
           return decrypt_credentials_cmd(credential)
         end
 
+        # Special handling for job actions
+        if @pending_job_action
+          job_action = @pending_job_action
+          @pending_job_action = nil
+          case job_action[:action]
+          when :retry          then return retry_job_cmd(job_action[:fe_id])
+          when :discard        then return discard_job_cmd(job_action[:fe_id])
+          when :retry_all      then return retry_all_jobs_cmd
+          when :dispatch       then return dispatch_job_cmd(job_action[:job_id])
+          when :discard_scheduled then return discard_scheduled_job_cmd(job_action[:job_id])
+          end
+        end
+
         return run_rails_cmd(command, panel_type)
       elsif @confirmation.cancelled?
         @pending_credential = nil
+        @pending_job_action = nil
         @confirmation = nil
         set_flash("Cancelled.")
       end
@@ -673,6 +1032,17 @@ module LazyRails
       elsif current_panel.type == :server && @server.log_changed?
         # Refresh server detail content only when log has new output
         update_detail_content
+      end
+
+      # Auto-refresh jobs panel when focused (every 5 ticks = 5 seconds)
+      if current_panel.type == :jobs && @jobs_available != false
+        @jobs_tick_counter += 1
+        if @jobs_tick_counter >= 5
+          @jobs_tick_counter = 0
+          return batch(load_jobs_cmd(@jobs_filter), ui_tick)
+        end
+      else
+        @jobs_tick_counter = 0
       end
 
       # Check log watcher for new entries
@@ -771,7 +1141,7 @@ module LazyRails
       if msg.error
         @table_browser.fail_loading(msg.error)
       else
-        @table_browser.load_rows(msg.columns, msg.rows)
+        @table_browser.load_rows(msg.columns, msg.rows, total: msg.total)
       end
     end
 
@@ -796,6 +1166,43 @@ module LazyRails
       panel = find_panel(:mailers)
       panel&.finish_loading(items: msg.previews, error: msg.error)
       update_detail_content
+    end
+
+    def handle_jobs_loaded(msg)
+      panel = find_panel(:jobs)
+      return unless panel
+
+      @jobs_available = msg.available
+
+      if !msg.available
+        panel.finish_loading(items: [])
+        panel.update_title("Jobs (N/A)")
+      elsif msg.error
+        panel.fail_loading(msg.error)
+      else
+        panel.finish_loading(items: msg.jobs)
+        counts = msg.counts
+        failed = counts[:failed] || 0
+        total = counts.values.sum
+        title = if failed > 0
+          "Jobs (#{failed} failed)"
+        elsif total > 0
+          "Jobs (#{total})"
+        else
+          "Jobs"
+        end
+        panel.update_title(title)
+      end
+      update_detail_content
+    end
+
+    def handle_job_action(msg)
+      if msg.success
+        set_flash("\u2713 #{msg.action} job ##{msg.job_id}")
+      else
+        set_flash("\u2717 #{msg.action} failed: #{msg.error}")
+      end
+      load_jobs_cmd(@jobs_filter)
     end
 
     def handle_mailer_preview_loaded(msg)
@@ -839,6 +1246,8 @@ module LazyRails
         @config = Config.load(@project.dir)
         custom_panel = find_panel(:custom)
         custom_panel&.finish_loading(items: @config.custom_commands)
+      when :jobs
+        return load_jobs_cmd(@jobs_filter)
       when :logs
         # Clear and restart — new entries will flow in via tick
         panel.finish_loading(items: [])

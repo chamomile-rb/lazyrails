@@ -16,6 +16,7 @@ module LazyRails
       @thread = nil
       @mutex = Mutex.new
       @log_dirty = false
+      @uses_bin_dev = File.exist?(File.join(project.dir, "bin/dev"))
     end
 
     def state
@@ -24,6 +25,10 @@ module LazyRails
 
     def pid
       @mutex.synchronize { @pid }
+    end
+
+    def uses_bin_dev?
+      @uses_bin_dev
     end
 
     def start
@@ -39,27 +44,35 @@ module LazyRails
 
       @thread = Thread.new do
         env = { "DISABLE_SPRING" => "1", "PORT" => port_str }
-        cmd = "#{@project.bin_rails} server -p #{@port}"
+        cmd = if @uses_bin_dev
+                "bin/dev"
+              else
+                "#{@project.bin_rails} server -p #{@port}"
+              end
 
         begin
-          Open3.popen2e(env, cmd, chdir: @project.dir) do |stdin, output, wait_thr|
-            @mutex.synchronize { @pid = wait_thr.pid }
-            stdin.close
+          # Clear Bundler env so the Rails app uses its own Gemfile
+          Bundler.with_unbundled_env do
+            # Use pgroup for process group kill (needed for foreman/bin/dev)
+            Open3.popen2e(env, cmd, chdir: @project.dir, pgroup: true) do |stdin, output, wait_thr|
+              @mutex.synchronize { @pid = wait_thr.pid }
+              stdin.close
 
-            output.each_line do |line|
-              line = CommandRunner.force_utf8(line)
-              @mutex.synchronize do
-                @log_lines << line
-                @log_lines.shift if @log_lines.size > MAX_LOG_LINES
-                @log_dirty = true
-                @state = :running if @state == :starting && line.include?("Listening on")
+              output.each_line do |line|
+                line = CommandRunner.force_utf8(line)
+                @mutex.synchronize do
+                  @log_lines << line
+                  @log_lines.shift if @log_lines.size > MAX_LOG_LINES
+                  @log_dirty = true
+                  @state = :running if @state == :starting && line.include?("Listening on")
+                end
               end
-            end
 
-            status = wait_thr.value
-            @mutex.synchronize do
-              @state = status.success? ? :stopped : :error
-              @pid = nil
+              status = wait_thr.value
+              @mutex.synchronize do
+                @state = status.success? ? :stopped : :error
+                @pid = nil
+              end
             end
           end
         rescue => e
@@ -78,7 +91,8 @@ module LazyRails
       return unless pid_to_kill
 
       begin
-        Process.kill("TERM", pid_to_kill)
+        # Kill the process group so foreman children (puma, vite) also die
+        Process.kill("TERM", -pid_to_kill)
 
         deadline = Time.now + KILL_TIMEOUT
         loop do
@@ -88,7 +102,7 @@ module LazyRails
         end
 
         remaining = @mutex.synchronize { @pid }
-        Process.kill("KILL", remaining) if remaining
+        Process.kill("KILL", -remaining) if remaining
       rescue Errno::ESRCH, Errno::EPERM
         # Process already gone or no permission
       end

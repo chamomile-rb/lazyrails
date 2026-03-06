@@ -3,6 +3,7 @@
 module LazyRails
   class TableBrowser
     QUERY_SCRIPT = File.expand_path("table_query_runner.rb", __dir__)
+    PAGE_SIZE = 100
 
     attr_reader :screen, :cursor, :selected_table
 
@@ -16,6 +17,13 @@ module LazyRails
       @loading = false
       @error = nil
       @screen = :table_list
+
+      # Query state
+      @where_clause = nil
+      @order_column = nil
+      @order_dir = "ASC"
+      @page = 0
+      @total_rows = 0
     end
 
     def visible? = @visible
@@ -30,6 +38,7 @@ module LazyRails
       @loading = false
       @error = nil
       @screen = :table_list
+      reset_query_state
     end
 
     def hide
@@ -53,9 +62,10 @@ module LazyRails
       @error = error
     end
 
-    def load_rows(columns, rows)
+    def load_rows(columns, rows, total: 0)
       @loading = false
       @error = nil
+      @total_rows = total
 
       table_columns = columns.map do |col|
         Petals::Table::Column.new(title: col, width: column_width(col, columns.size))
@@ -68,6 +78,42 @@ module LazyRails
       @table_widget = Petals::Table.new(columns: table_columns, rows: table_rows)
     end
 
+    def current_query_params
+      params = {}
+      params["where"] = @where_clause if @where_clause && !@where_clause.strip.empty?
+      params["order"] = order_expression if @order_column && !@order_column.strip.empty?
+      params["limit"] = PAGE_SIZE
+      params["offset"] = @page * PAGE_SIZE if @page > 0
+      params
+    end
+
+    def set_where(clause)
+      @where_clause = clause.nil? || clause.strip.empty? ? nil : clause
+      @page = 0
+    end
+
+    def set_order(input)
+      if input.nil? || input.strip.empty?
+        @order_column = nil
+        @order_dir = "ASC"
+      else
+        parts = input.strip.split(/\s+/, 2)
+        col = parts[0]
+        dir = parts[1]&.upcase
+
+        if dir == "DESC" || dir == "ASC"
+          @order_column = col
+          @order_dir = dir
+        elsif @order_column == col
+          @order_dir = @order_dir == "ASC" ? "DESC" : "ASC"
+        else
+          @order_column = col
+          @order_dir = "ASC"
+        end
+      end
+      @page = 0
+    end
+
     def render(width:, height:)
       case @screen
       when :table_list then render_table_list(width, height)
@@ -76,6 +122,23 @@ module LazyRails
     end
 
     private
+
+    def reset_query_state
+      @where_clause = nil
+      @order_column = nil
+      @order_dir = "ASC"
+      @page = 0
+      @total_rows = 0
+    end
+
+    def order_expression
+      "#{@order_column} #{@order_dir}"
+    end
+
+    def total_pages
+      return 1 if @total_rows <= 0
+      (@total_rows.to_f / PAGE_SIZE).ceil
+    end
 
     def handle_table_list_key(key)
       case key
@@ -91,6 +154,7 @@ module LazyRails
 
         @selected_table = @tables[@cursor]
         @screen = :row_data
+        reset_query_state
         { action: :load_table, table: @selected_table }
       when :escape, "t"
         :close
@@ -107,6 +171,23 @@ module LazyRails
       when "k", :up
         @table_widget&.move_up
         nil
+      when "w"
+        { action: :input_where }
+      when "o"
+        { action: :input_order }
+      when "n"
+        if @page < total_pages - 1
+          @page += 1
+          { action: :load_table, table: @selected_table }
+        end
+      when "p"
+        if @page > 0
+          @page -= 1
+          { action: :load_table, table: @selected_table }
+        end
+      when "c"
+        reset_query_state
+        { action: :load_table, table: @selected_table }
       when :escape
         @screen = :table_list
         @table_widget = nil
@@ -149,19 +230,28 @@ module LazyRails
       header = Flourish::Style.new.bold.render("Table: #{@selected_table}")
       lines = [header, ""]
 
+      # Status line with query info
+      status_parts = []
+      status_parts << "WHERE #{@where_clause}" if @where_clause
+      status_parts << "ORDER BY #{order_expression}" if @order_column
+      status_parts << "Page #{@page + 1}/#{total_pages} (#{@total_rows} rows)"
+      status_line = status_parts.join(" | ")
+      lines << Flourish::Style.new.foreground("#888888").render(status_line)
+      lines << ""
+
       if @loading
         lines << "Loading..."
       elsif @error
         lines << Flourish::Style.new.foreground("#ff6347").render("Error: #{@error}")
       elsif @table_widget
-        @table_widget.height = [height - 5, 3].max
+        @table_widget.height = [height - 7, 3].max
         lines << @table_widget.view
       else
         lines << "No data."
       end
 
       lines << ""
-      lines << "j/k scroll | Esc back to tables | q quit"
+      lines << "j/k scroll | w where | o order | n/p page | c clear | Esc back | q quit"
       lines.join("\n")
     end
 

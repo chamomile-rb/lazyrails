@@ -6,7 +6,7 @@ module LazyRails
       GLOBAL_BINDINGS = [
         { section: "Navigation", bindings: [
           ["Tab/Shift+Tab", "Cycle panels"],
-          ["1-7", "Jump to panel"],
+          ["1-9", "Jump to panel"],
           ["j/k", "Scroll up/down"],
           ["Enter", "Select / expand"],
           ["q", "Quit"],
@@ -14,7 +14,8 @@ module LazyRails
           ["R", "Refresh panel"],
           ["/", "Filter (where supported)"],
           ["L", "Toggle command log"],
-          ["z", "Undo last action"]
+          ["z", "Undo last action"],
+          ["G", "Open generator menu"]
         ] },
         { section: "Server", bindings: [
           ["s", "Start server"],
@@ -34,6 +35,21 @@ module LazyRails
           ["Enter", "Run selected test"],
           ["a", "Run all tests"],
           ["f", "Run failed only"]
+        ] },
+        { section: "Table Browser", bindings: [
+          ["w", "Set WHERE clause"],
+          ["o", "Set ORDER BY"],
+          ["n/p", "Next/prev page"],
+          ["c", "Clear filters"]
+        ] },
+        { section: "Jobs", bindings: [
+          ["r", "Retry failed job"],
+          ["d", "Discard failed job"],
+          ["A", "Retry all failed"],
+          ["e", "Dispatch scheduled job now"],
+          ["D", "Discard scheduled job"],
+          ["f", "Cycle filter"],
+          ["R", "Refresh"]
         ] },
         { section: "Gems", bindings: [
           ["Enter", "Show gem info"],

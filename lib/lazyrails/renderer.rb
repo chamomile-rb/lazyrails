@@ -2,6 +2,9 @@
 
 module LazyRails
   module Renderer
+    FOCUSED_COLOR = "#7d56f4"
+    UNFOCUSED_COLOR = "#444444"
+
     private
 
     def render_left_panels(width)
@@ -76,7 +79,14 @@ module LazyRails
 
     def render_list_panel(panel, width:, height:, focused:)
       items = panel.filtered_items
-      return "No items." if items.empty?
+      if items.empty?
+        return case panel.type
+               when :console then "No expressions yet.\n\nPress 'e' to evaluate a Ruby expression."
+               when :logs    then "No log entries yet.\n\nLogs appear here as requests hit the server.\nPress 's' on the Server panel to start it."
+               when :jobs    then @jobs_available == false ? "No background jobs.\n\nSolid Queue not detected." : "No jobs in queue."
+               else "No items."
+               end
+      end
 
       visible = items[panel.scroll_offset, [height, 1].max] || []
       visible.each_with_index.map do |item, i|
@@ -92,6 +102,7 @@ module LazyRails
         when :credentials then Views::CredentialsView.render_item(item, selected: selected, width: width)
         when :logs     then Views::LogView.render_item(item, selected: selected, width: width)
         when :mailers  then Views::MailerView.render_item(item, selected: selected, width: width)
+        when :jobs     then Views::JobsView.render_item(item, selected: selected, width: width)
         when :custom   then Views::CustomCommandsView.render_item(item, selected: selected, width: width)
         else
           selected ? Flourish::Style.new.reverse.render(item.to_s) : item.to_s
@@ -153,6 +164,8 @@ module LazyRails
         item ? Views::LogView.render_detail(item, width: detail_width) : "Waiting for log entries..."
       when :mailers
         render_mailer_detail(item, detail_width)
+      when :jobs
+        item ? Views::JobsView.render_detail(item, width: detail_width) : "Select a job."
       when :custom
         item ? Views::CustomCommandsView.render_detail(item, width: detail_width) : "Select a command."
       else
