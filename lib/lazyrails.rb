@@ -64,9 +64,11 @@ require_relative "lazyrails/views/log_view"
 require_relative "lazyrails/views/mailer_view"
 require_relative "lazyrails/views/jobs_view"
 
-# App modules (stateless utilities)
+# App modules
 require_relative "lazyrails/renderer"
 require_relative "lazyrails/data_loader"
+require_relative "lazyrails/panel_handlers"
+require_relative "lazyrails/message_handlers"
 require_relative "lazyrails/app"
 
 module LazyRails
