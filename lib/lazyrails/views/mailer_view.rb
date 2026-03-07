@@ -8,7 +8,7 @@ module LazyRails
 
         if selected
           plain = ViewHelpers.truncate(preview.display_name, width)
-          Flourish::Style.new.reverse.render(plain)
+          ViewHelpers.selected_style.render(plain.ljust(width))
         else
           text
         end

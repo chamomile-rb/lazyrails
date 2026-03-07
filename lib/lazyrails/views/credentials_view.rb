@@ -7,7 +7,7 @@ module LazyRails
         text = ViewHelpers.truncate(credential_file.to_s, width)
 
         if selected
-          Flourish::Style.new.reverse.render(text)
+          ViewHelpers.selected_style.render(text.ljust(width))
         else
           color = credential_file.exists ? "#04b575" : "#666666"
           Flourish::Style.new.foreground(color).render(text)

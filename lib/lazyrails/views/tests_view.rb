@@ -7,7 +7,7 @@ module LazyRails
         text = test_file.to_s
 
         if selected
-          Flourish::Style.new.reverse.render(text)
+          ViewHelpers.selected_style.render(text.ljust(width))
         else
           color = case test_file.status
                   when :passed then "#04b575"

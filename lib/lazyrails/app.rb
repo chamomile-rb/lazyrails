@@ -64,6 +64,7 @@ module LazyRails
       @table_browser = TableBrowser.new
       @input_mode = InputMode.new
       @welcome = WelcomeOverlay.new
+      @help = HelpOverlay.new
       @user_settings = UserSettings.new
 
       # Data stores
@@ -78,7 +79,6 @@ module LazyRails
       @log_filter = nil
 
       # UI state
-      @show_help = false
       @confirmation = nil
       @route_grouped = false
       @last_server_state = :stopped
@@ -124,6 +124,7 @@ module LazyRails
 
     def update(msg)
       return handle_welcome(msg) if @welcome.visible? && msg.is_a?(Chamomile::KeyMsg)
+      return handle_help_key(msg) if @help.visible? && msg.is_a?(Chamomile::KeyMsg)
       return handle_confirmation(msg) if @confirmation
       return handle_input_mode(msg) if @input_mode.active?
 
@@ -150,12 +151,6 @@ module LazyRails
     end
 
     def view
-      return @welcome.render(width: @width, height: @height) if @welcome.visible?
-      return render_help if @show_help
-      return @command_log_overlay.render(width: @width) if @command_log_overlay.visible?
-      return @table_browser.render(width: @width, height: @height) if @table_browser.visible?
-      return @menu.render(width: @width, height: @height) if @menu.visible?
-
       left_width = (@width * LEFT_WIDTH_RATIO).to_i
       right_width = @width - left_width - 1
 
@@ -164,16 +159,35 @@ module LazyRails
 
       layout = Flourish.join_horizontal(Flourish::TOP, left_content, " ", right_content)
 
-      if @confirmation
-        "#{layout}\n#{render_confirmation}"
-      elsif @input_mode.active?
-        "#{layout}\n#{render_filter_bar}"
+      base = if @input_mode.active?
+               "#{layout}\n#{render_filter_bar}"
+             else
+               "#{layout}\n#{render_status_bar}"
+             end
+
+      # Overlays composited on top of the base layout
+      if @welcome.visible?
+        overlay_on(base, @welcome.render(width: @width, height: @height))
+      elsif @help.visible?
+        overlay_on(base, @help.render(width: @width, height: @height))
+      elsif @command_log_overlay.visible?
+        overlay_on(base, render_command_log_box)
+      elsif @table_browser.visible?
+        overlay_on(base, render_table_browser_box)
+      elsif @menu.visible?
+        overlay_on(base, @menu.render(width: @width, height: @height))
+      elsif @confirmation
+        overlay_on(base, render_confirmation_box)
       else
-        "#{layout}\n#{render_status_bar}"
+        base
       end
     end
 
     private
+
+    def overlay_on(base, popup_box)
+      ViewHelpers.overlay(base, popup_box, @width, @height)
+    end
 
     # ─── Helpers ──────────────────────────────────────────
 
@@ -230,6 +244,13 @@ module LazyRails
       when :quit
         return shutdown
       end
+      nil
+    end
+
+    def handle_help_key(msg)
+      signal = @help.handle_key(msg.key)
+      return shutdown if signal == :quit
+
       nil
     end
 
@@ -312,11 +333,6 @@ module LazyRails
     # ─── Key handling ─────────────────────────────────────
 
     def handle_key(msg)
-      if @show_help
-        @show_help = false if ["?", :escape].include?(msg.key)
-        return msg.key == "q" ? shutdown : nil
-      end
-
       if @command_log_overlay.visible?
         signal = @command_log_overlay.handle_key(msg.key)
         return shutdown if signal == :quit
@@ -343,7 +359,7 @@ module LazyRails
 
       case msg.key
       when "q"  then return shutdown
-      when "?"  then @show_help = true
+      when "?"  then @help.show
       when "L"  then @command_log_overlay.show
       when :tab, :right, "l"
         clear_panel_state

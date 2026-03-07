@@ -8,7 +8,7 @@ module LazyRails
         text = ViewHelpers.truncate("#{command.name}#{key_hint}", width)
 
         if selected
-          Flourish::Style.new.reverse.render(text)
+          ViewHelpers.selected_style.render(text.ljust(width))
         else
           text
         end

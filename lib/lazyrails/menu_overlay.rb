@@ -68,7 +68,7 @@ module LazyRails
         key_hint = item.key ? " [#{item.key}]" : ""
         text = "  #{item.label}#{key_hint}  "
         if selected
-          Flourish::Style.new.reverse.render(text.ljust(menu_width - 4))
+          ViewHelpers.selected_style.render(text.ljust(menu_width - 4))
         else
           text.ljust(menu_width - 4)
         end
@@ -80,7 +80,7 @@ module LazyRails
       box = Flourish::Style.new
                            .width(menu_width)
                            .border(Flourish::Border::ROUNDED)
-                           .border_foreground("#7d56f4")
+                           .border_foreground("#b48ead")
                            .padding(0, 1)
                            .render("#{content}\n\n#{footer}")
 
@@ -88,13 +88,11 @@ module LazyRails
       box_lines = box.lines
       if box_lines.any?
         title_text = " #{@title} "
-        title_styled = Flourish::Style.new.foreground("#7d56f4").bold.render(title_text)
+        title_styled = Flourish::Style.new.foreground("#b48ead").bold.render(title_text)
         box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
       end
 
-      # Center the box in the viewport
-      box_content = box_lines.join
-      Flourish.place(width, height, Flourish::CENTER, Flourish::CENTER, box_content)
+      box_lines.join
     end
 
     private

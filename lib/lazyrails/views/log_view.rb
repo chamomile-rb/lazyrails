@@ -27,7 +27,7 @@ module LazyRails
         text = "#{verb} #{path_text.ljust([width - 20, 1].max)} #{status} #{icon}#{slow_mark}"
 
         if selected
-          Flourish::Style.new.reverse.render(text)
+          ViewHelpers.selected_style.render(text.ljust(width))
         else
           Flourish::Style.new.foreground(color).render(text)
         end

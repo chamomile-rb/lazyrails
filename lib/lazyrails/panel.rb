@@ -72,12 +72,17 @@ module LazyRails
       return if list.empty?
 
       @cursor = (@cursor + delta).clamp(0, list.size - 1)
+      clamp_scroll(visible_height)
+    end
 
-      if @cursor < @scroll_offset
-        @scroll_offset = @cursor
-      elsif @cursor >= @scroll_offset + visible_height
-        @scroll_offset = @cursor - visible_height + 1
-      end
+    # Ensures cursor is visible within the given viewport height.
+    # Call before rendering to handle resize / panel focus changes.
+    def ensure_visible(visible_height)
+      list = filtered_items
+      return if list.empty?
+
+      @cursor = @cursor.clamp(0, list.size - 1)
+      clamp_scroll(visible_height)
     end
 
     def reset_cursor
@@ -90,6 +95,16 @@ module LazyRails
     end
 
     private
+
+    def clamp_scroll(visible_height)
+      if @cursor < @scroll_offset
+        @scroll_offset = @cursor
+      elsif @cursor >= @scroll_offset + visible_height
+        @scroll_offset = @cursor - visible_height + 1
+      end
+      max_offset = [filtered_items.size - visible_height, 0].max
+      @scroll_offset = @scroll_offset.clamp(0, max_offset)
+    end
 
     def invalidate_filter_cache
       @filtered_cache = nil

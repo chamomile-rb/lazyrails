@@ -17,7 +17,7 @@ module LazyRails
 
           lines = []
           if i == selected
-            lines << Flourish::Style.new.reverse.render(text)
+            lines << ViewHelpers.selected_style.render(text)
           else
             styled_icon = Flourish::Style.new.foreground(color).render(icon)
             lines << "#{styled_icon} #{cmd_text.ljust(width - 12)} #{duration}"

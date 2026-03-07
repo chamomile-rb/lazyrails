@@ -8,8 +8,47 @@ module LazyRails
       "#{str[0..(max - 2)]}…"
     end
 
+    def self.selected_style
+      Flourish::Style.new.bold.reverse
+    end
+
     def self.classify_name(name)
       name.to_s.split("_").map(&:capitalize).join
+    end
+
+    # Composites a popup box on top of a base layout, centered.
+    # Both are full terminal renders as strings. The popup lines replace
+    # the corresponding base lines at the centered position.
+    def self.overlay(base, popup_box, screen_width, screen_height)
+      base_lines = base.split("\n", -1)
+      box_lines = popup_box.split("\n", -1)
+
+      # Remove trailing empty lines from box
+      box_lines.pop while box_lines.last&.then { |l| Flourish::ANSI.strip(l).strip.empty? }
+
+      box_h = box_lines.size
+      box_w = box_lines.map { |l| Flourish::ANSI.printable_width(l) }.max || 0
+
+      # Center position
+      start_row = [(screen_height - box_h) / 2, 0].max
+      start_col = [(screen_width - box_w) / 2, 0].max
+
+      # Pad base to fill screen height
+      base_lines << "" while base_lines.size < screen_height
+
+      box_lines.each_with_index do |box_line, i|
+        row = start_row + i
+        break if row >= base_lines.size
+
+        if start_col == 0
+          base_lines[row] = box_line
+        else
+          left_pad = " " * start_col
+          base_lines[row] = "#{left_pad}#{box_line}"
+        end
+      end
+
+      base_lines[0, screen_height].join("\n")
     end
 
     # Injects a styled title into the first line of a bordered box.

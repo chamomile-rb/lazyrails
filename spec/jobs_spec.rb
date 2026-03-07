@@ -177,9 +177,9 @@ RSpec.describe "Jobs structs and views" do
         expect(stripped).to include("DoneJob")
       end
 
-      it "renders selected item with reverse style" do
+      it "renders selected item with bold reverse style" do
         output = described_class.render_item(ready_job, selected: true, width: 60)
-        expect(output).to include("\e[7m")
+        expect(output).to include("\e[1;7m")
       end
     end
 

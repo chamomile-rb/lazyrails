@@ -92,18 +92,18 @@ module LazyRails
       box = Flourish::Style.new
                            .width(box_width)
                            .border(Flourish::Border::ROUNDED)
-                           .border_foreground("#7d56f4")
+                           .border_foreground("#b48ead")
                            .padding(0, 1)
                            .render("#{content}\n\n#{footer}")
 
       box_lines = box.lines
       if box_lines.any?
         title_text = " LazyRails "
-        title_styled = Flourish::Style.new.foreground("#7d56f4").bold.render(title_text)
+        title_styled = Flourish::Style.new.foreground("#b48ead").bold.render(title_text)
         box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
       end
 
-      Flourish.place(width, height, Flourish::CENTER, Flourish::CENTER, box_lines.join)
+      box_lines.join
     end
 
     private

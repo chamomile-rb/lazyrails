@@ -2,8 +2,8 @@
 
 module LazyRails
   module Renderer
-    FOCUSED_COLOR = "#7d56f4"
-    UNFOCUSED_COLOR = "#444444"
+    FOCUSED_COLOR = "#b48ead"
+    UNFOCUSED_COLOR = "#7c7c7c"
 
     private
 
@@ -86,6 +86,7 @@ module LazyRails
                end
       end
 
+      panel.ensure_visible([height, 1].max) if focused
       visible = items[panel.scroll_offset, [height, 1].max] || []
       visible.each_with_index.map do |item, i|
         selected = focused && (i + panel.scroll_offset) == panel.cursor
@@ -192,34 +193,109 @@ module LazyRails
     end
 
     def render_status_bar
-      left = if @flash.active?
-               "  #{@flash.message}"
-             else
-               " Tab navigate \u2502 j/k scroll \u2502 Enter select \u2502 L log \u2502 ? help \u2502 q quit"
-             end
+      if @flash.active?
+        return Flourish::Style.new.foreground("#e5c07b").width(@width).render("  #{@flash.message}".slice(0, @width))
+      end
 
-      Flourish::Style.new
-                     .foreground("#666666")
-                     .width(@width)
-                     .render(left.slice(0, @width))
+      hints = [
+        ["Tab", "navigate"], ["j/k", "scroll"], ["Enter", "select"],
+        ["x", "actions"], ["L", "log"], ["?", "help"], ["q", "quit"]
+      ]
+      bar = " " + hints.map do |key, desc|
+        styled_key = Flourish::Style.new.bold.foreground("#b48ead").render(key)
+        "#{styled_key} #{desc}"
+      end.join(" \u2502 ")
+
+      Flourish::Style.new.foreground("#999999").width(@width).render(bar)
     end
 
     def render_filter_bar
       Flourish::Style.new.width(@width).render(@input_mode.view)
     end
 
-    def render_confirmation
+    def render_confirmation_box
       return "" unless @confirmation
 
       text = @confirmation.prompt_text
       return "" unless text
 
       color = @confirmation.red? ? "#ff6347" : "#e5c07b"
-      Flourish::Style.new.foreground(color).width(@width).render(text)
+      cmd = @confirmation.command.is_a?(Array) ? @confirmation.command.join(" ") : @confirmation.command.to_s
+
+      lines = []
+      lines << Flourish::Style.new.foreground(color).bold.render(cmd)
+      lines << ""
+      lines << text
+      lines << ""
+      lines << Flourish::Style.new.foreground("#666666").render("Esc cancel")
+      content = lines.join("\n")
+
+      box_width = [[cmd.length + 6, text.length + 6].max, @width - 8].min
+      box_width = [box_width, 30].max
+
+      box = Flourish::Style.new
+                           .width(box_width)
+                           .border(Flourish::Border::ROUNDED)
+                           .border_foreground(color)
+                           .padding(0, 1)
+                           .render(content)
+
+      box_lines = box.lines
+      if box_lines.any?
+        title_text = " Confirm "
+        title_styled = Flourish::Style.new.foreground(color).bold.render(title_text)
+        box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
+      end
+
+      box_lines.join
     end
 
-    def render_help
-      Views::HelpView.render(width: @width, height: @height)
+    def render_command_log_box
+      content = @command_log_overlay.render(width: @width - 8)
+
+      box_width = [@width - 4, 60].max
+      box_width = [box_width, @width - 2].min
+
+      box = Flourish::Style.new
+                           .width(box_width)
+                           .height(@height - 4)
+                           .border(Flourish::Border::ROUNDED)
+                           .border_foreground("#b48ead")
+                           .padding(0, 1)
+                           .render(content)
+
+      box_lines = box.lines
+      if box_lines.any?
+        title_text = " Command Log "
+        title_styled = Flourish::Style.new.foreground("#b48ead").bold.render(title_text)
+        box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
+      end
+
+      box_lines.join
+    end
+
+    def render_table_browser_box
+      content = @table_browser.render(width: @width - 8, height: @height - 6)
+
+      box_width = [@width - 4, 60].max
+      box_width = [box_width, @width - 2].min
+
+      box = Flourish::Style.new
+                           .width(box_width)
+                           .height(@height - 4)
+                           .border(Flourish::Border::ROUNDED)
+                           .border_foreground("#b48ead")
+                           .padding(0, 1)
+                           .render(content)
+
+      box_lines = box.lines
+      if box_lines.any?
+        title_text = " Table Browser "
+        title_styled = Flourish::Style.new.foreground("#b48ead").bold.render(title_text)
+        box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
+      end
+
+      box_lines.join
     end
 
     def render_credentials_detail(item, width)

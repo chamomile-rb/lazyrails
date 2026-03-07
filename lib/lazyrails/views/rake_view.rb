@@ -27,7 +27,7 @@ module LazyRails
                                                           [width - name_text.length - 3,
                                                            0].max)}"
                   end
-          Flourish::Style.new.reverse.render(ViewHelpers.truncate(plain, width))
+          ViewHelpers.selected_style.render(ViewHelpers.truncate(plain, width).ljust(width))
         else
           text
         end

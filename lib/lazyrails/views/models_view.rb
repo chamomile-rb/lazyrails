@@ -14,7 +14,7 @@ module LazyRails
         text = model.error ? "#{model.name} (error)" : model.to_s
 
         if selected
-          Flourish::Style.new.reverse.render(text)
+          ViewHelpers.selected_style.render(text.ljust(width))
         else
           text
         end

@@ -9,7 +9,7 @@ module LazyRails
         text = "#{arrow} #{migration.version}  #{ViewHelpers.truncate(migration.name, width - 22)}"
 
         if selected
-          Flourish::Style.new.reverse.render(text)
+          ViewHelpers.selected_style.render(text.ljust(width))
         else
           icon = Flourish::Style.new.foreground(color).render(arrow)
           "#{icon} #{migration.version}  #{ViewHelpers.truncate(migration.name, width - 22)}"

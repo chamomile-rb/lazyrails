@@ -27,7 +27,7 @@ module LazyRails
         text = ViewHelpers.truncate(text, width)
 
         if selected
-          Flourish::Style.new.reverse.render(text)
+          ViewHelpers.selected_style.render(text.ljust(width))
         else
           color = STATUS_COLORS.fetch(job.status, "#cccccc")
           Flourish::Style.new.foreground(color).render(text)

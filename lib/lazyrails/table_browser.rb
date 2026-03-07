@@ -215,7 +215,7 @@ module LazyRails
         visible.each_with_index do |name, i|
           absolute_index = i + @scroll_offset
           lines << if absolute_index == @cursor
-                     Flourish::Style.new.reverse.render("  #{name.ljust([width - 6, 0].max)}  ")
+                     ViewHelpers.selected_style.render("  #{name.ljust([width - 6, 0].max)}  ")
                    else
                      "  #{name}"
                    end

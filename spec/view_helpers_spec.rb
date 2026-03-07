@@ -44,4 +44,60 @@ RSpec.describe LazyRails::ViewHelpers do
       expect(described_class.classify_name(:blog_posts)).to eq("BlogPosts")
     end
   end
+
+  describe ".overlay" do
+    let(:base) { (1..10).map { |i| "Base line #{i}".ljust(40) }.join("\n") }
+
+    it "centers a small popup over the base layout" do
+      popup = "╭──────╮\n│ Hi!! │\n╰──────╯"
+      result = described_class.overlay(base, popup, 40, 10)
+      lines = result.split("\n")
+
+      # Base lines visible above and below the popup
+      expect(Flourish::ANSI.strip(lines[0])).to include("Base line 1")
+      expect(Flourish::ANSI.strip(lines[9])).to include("Base line 10")
+
+      # Popup lines centered in the middle
+      popup_rows = lines.select { |l| Flourish::ANSI.strip(l).include?("Hi!!") }
+      expect(popup_rows.size).to eq(1)
+    end
+
+    it "preserves exact screen_height line count" do
+      popup = "small"
+      result = described_class.overlay(base, popup, 40, 10)
+      expect(result.split("\n", -1).size).to eq(10)
+    end
+
+    it "handles popup taller than screen" do
+      tall_popup = (1..20).map { |i| "popup #{i}" }.join("\n")
+      result = described_class.overlay(base, tall_popup, 40, 5)
+      lines = result.split("\n", -1)
+      expect(lines.size).to eq(5)
+    end
+
+    it "handles empty popup gracefully" do
+      result = described_class.overlay(base, "", 40, 10)
+      expect(result).to include("Base line 1")
+    end
+
+    it "handles empty base" do
+      result = described_class.overlay("", "popup", 40, 5)
+      lines = result.split("\n", -1)
+      expect(lines.size).to eq(5)
+      expect(lines.any? { |l| l.include?("popup") }).to be true
+    end
+
+    it "handles popup wider than screen" do
+      wide = "x" * 50
+      result = described_class.overlay("base", wide, 20, 3)
+      expect(result).to include("x" * 50)
+    end
+
+    it "works with ANSI-styled popup content" do
+      styled = Flourish::Style.new.bold.render("Bold")
+      result = described_class.overlay("aaa\nbbb\nccc", styled, 20, 3)
+      expect(result).to include("\e[1m")
+      expect(Flourish::ANSI.strip(result)).to include("Bold")
+    end
+  end
 end
