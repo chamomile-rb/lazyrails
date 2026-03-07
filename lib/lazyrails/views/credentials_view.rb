@@ -17,20 +17,20 @@ module LazyRails
       def self.render_detail(credential_file, width:)
         lines = []
         lines << "#{credential_file.environment} credentials"
-        lines << "\u2500" * [width - 4, 40].min
+        lines << ("\u2500" * [width - 4, 40].min)
         lines << ""
-        if credential_file.exists
-          lines << "Press Enter to decrypt and view (y/n confirmation)."
-        else
-          lines << "Key file not found. Cannot decrypt."
-        end
+        lines << if credential_file.exists
+                   "Press Enter to decrypt and view (y/n confirmation)."
+                 else
+                   "Key file not found. Cannot decrypt."
+                 end
         lines.join("\n")
       end
 
       def self.render_detail_content(credential_file, content, width:)
         lines = []
         lines << "#{credential_file.environment} credentials"
-        lines << "\u2500" * [width - 4, 40].min
+        lines << ("\u2500" * [width - 4, 40].min)
         lines << ""
         lines << content
         lines << ""

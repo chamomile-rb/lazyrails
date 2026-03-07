@@ -47,7 +47,7 @@ module LazyRails
   Validation = Data.define(:kind, :attributes, :options) do
     def to_s
       attrs = attributes.map { |a| ":#{a}" }.join(", ")
-      opts = options.empty? ? "" : ", #{options.map { |k, v| "#{k}: #{v.inspect}" }.join(", ")}"
+      opts = options.empty? ? "" : ", #{options.map { |k, v| "#{k}: #{v.inspect}" }.join(', ')}"
       "validates #{attrs}, #{kind}: true#{opts}"
     end
   end
@@ -88,16 +88,16 @@ module LazyRails
   end
 
   CommandEntry = Data.define(:command, :exit_code, :duration_ms, :timestamp, :stdout, :stderr,
-                            :annotation, :undo_command) do
+                             :annotation, :undo_command) do
     def initialize(annotation: nil, undo_command: nil, **kwargs)
       super
     end
 
-    def success? = exit_code == 0
+    def success? = exit_code.zero?
 
     def to_s
       icon = success? ? "\u2713" : "\u2717"
-      duration = "%.1fs" % (duration_ms / 1000.0)
+      duration = format("%.1fs", duration_ms / 1000.0)
       "#{icon} #{command.ljust(50)} #{duration}"
     end
   end

@@ -10,12 +10,23 @@ module LazyRails
           text = ViewHelpers.truncate(name_text, width)
         else
           desc_width = [width - name_text.length - 3, 0].max
-          dimmed_desc = desc_width > 0 ? Flourish::Style.new.foreground("#666666").render(ViewHelpers.truncate(desc, desc_width)) : ""
+          dimmed_desc = if desc_width.positive?
+                          Flourish::Style.new.foreground("#666666").render(ViewHelpers.truncate(desc,
+                                                                                                desc_width))
+                        else
+                          ""
+                        end
           text = "#{name_text}  #{dimmed_desc}"
         end
 
         if selected
-          plain = desc.empty? ? name_text : "#{name_text}  #{ViewHelpers.truncate(desc, [width - name_text.length - 3, 0].max)}"
+          plain = if desc.empty?
+                    name_text
+                  else
+                    "#{name_text}  #{ViewHelpers.truncate(desc,
+                                                          [width - name_text.length - 3,
+                                                           0].max)}"
+                  end
           Flourish::Style.new.reverse.render(ViewHelpers.truncate(plain, width))
         else
           text
@@ -25,10 +36,10 @@ module LazyRails
       def self.render_detail(task, width:)
         lines = []
         lines << task.name
-        lines << "=" * [width - 4, 40].min
+        lines << ("=" * [width - 4, 40].min)
         lines << ""
-        lines << "Description: #{task.description.to_s.empty? ? "(none)" : task.description}"
-        lines << "Source:      #{task.source.to_s.empty? ? "(unknown)" : task.source}"
+        lines << "Description: #{task.description.to_s.empty? ? '(none)' : task.description}"
+        lines << "Source:      #{task.source.to_s.empty? ? '(unknown)' : task.source}"
         lines << ""
         lines << "Run with: bin/rails #{task.name}"
         lines.join("\n")

@@ -43,10 +43,11 @@ end
 
 def apply_class_filter(scope, class_filter)
   return scope unless class_filter.present?
+
   scope.merge(SolidQueue::Job.where("class_name LIKE ?", "%#{class_filter}%"))
 end
 
-def fetch_jobs(params) # rubocop:disable Metrics/MethodLength
+def fetch_jobs(params) # rubocop:disable Metrics
   status = params["status"] || "all"
   class_filter = params["class_name"]
   queue_filter = params["queue"]
@@ -70,7 +71,7 @@ def fetch_jobs(params) # rubocop:disable Metrics/MethodLength
     failed_ids   = SolidQueue::FailedExecution.where(job_id: job_ids).pluck(:job_id).to_set
     claimed_ids  = SolidQueue::ClaimedExecution.where(job_id: job_ids).pluck(:job_id).to_set
     scheduled_ids = SolidQueue::ScheduledExecution.where(job_id: job_ids).pluck(:job_id).to_set
-    blocked_ids  = SolidQueue::BlockedExecution.where(job_id: job_ids).pluck(:job_id).to_set
+    blocked_ids = SolidQueue::BlockedExecution.where(job_id: job_ids).pluck(:job_id).to_set
 
     page_jobs.each do |job|
       st = if job.finished_at
@@ -97,6 +98,7 @@ def fetch_jobs(params) # rubocop:disable Metrics/MethodLength
     scope.order(priority: :asc, job_id: :asc).offset(offset).limit(limit).each do |re|
       job = re.job
       next unless job
+
       jobs << job_hash(job, status: "ready", arguments: job.arguments)
     end
 
@@ -108,8 +110,9 @@ def fetch_jobs(params) # rubocop:disable Metrics/MethodLength
     scope.order(job_id: :asc).offset(offset).limit(limit).each do |ce|
       job = ce.job
       next unless job
+
       jobs << job_hash(job, status: "claimed", arguments: job.arguments,
-                       worker_id: ce.process_id, started_at: ce.created_at&.iso8601)
+                            worker_id: ce.process_id, started_at: ce.created_at&.iso8601)
     end
 
   when "failed"
@@ -120,12 +123,13 @@ def fetch_jobs(params) # rubocop:disable Metrics/MethodLength
     scope.order(created_at: :desc).offset(offset).limit(limit).each do |fe|
       job = fe.job
       next unless job
+
       jobs << job_hash(job, status: "failed", arguments: job.arguments,
-                       fe_id: fe.id,
-                       error_class: fe.exception_class || "Unknown",
-                       error_message: fe.message || "No message",
-                       backtrace: (fe.backtrace || []).first(30),
-                       failed_at: fe.created_at&.iso8601)
+                            fe_id: fe.id,
+                            error_class: fe.exception_class || "Unknown",
+                            error_message: fe.message || "No message",
+                            backtrace: (fe.backtrace || []).first(30),
+                            failed_at: fe.created_at&.iso8601)
     end
 
   when "scheduled"
@@ -136,8 +140,9 @@ def fetch_jobs(params) # rubocop:disable Metrics/MethodLength
     scope.order(scheduled_at: :asc, priority: :asc).offset(offset).limit(limit).each do |se|
       job = se.job
       next unless job
+
       jobs << job_hash(job, status: "scheduled", arguments: job.arguments,
-                       scheduled_at: se.scheduled_at&.iso8601)
+                            scheduled_at: se.scheduled_at&.iso8601)
     end
 
   when "blocked"
@@ -148,9 +153,10 @@ def fetch_jobs(params) # rubocop:disable Metrics/MethodLength
     scope.order(job_id: :asc).offset(offset).limit(limit).each do |be|
       job = be.job
       next unless job
+
       jobs << job_hash(job, status: "blocked", arguments: job.arguments,
-                       concurrency_key: job.concurrency_key,
-                       expires_at: be.expires_at&.iso8601)
+                            concurrency_key: job.concurrency_key,
+                            expires_at: be.expires_at&.iso8601)
     end
 
   when "finished"
@@ -160,7 +166,7 @@ def fetch_jobs(params) # rubocop:disable Metrics/MethodLength
     total = scope.count
     scope.order(finished_at: :desc).offset(offset).limit(limit).each do |job|
       jobs << job_hash(job, status: "finished", arguments: job.arguments,
-                       finished_at: job.finished_at&.iso8601)
+                            finished_at: job.finished_at&.iso8601)
     end
   end
 
@@ -188,10 +194,10 @@ begin
     result = fetch_jobs(params)
 
     puts JSON.generate({
-      available: true, action: "stats_and_list",
-      counts: counts, queue_depths: queue_depths,
-      jobs: result[:jobs], total: result[:total]
-    })
+                         available: true, action: "stats_and_list",
+                         counts: counts, queue_depths: queue_depths,
+                         jobs: result[:jobs], total: result[:total]
+                       })
 
   # ─── Dashboard stats only ──────────────────────────────
   when "stats"
@@ -200,9 +206,9 @@ begin
     processes = SolidQueue::Process.group(:kind).count
 
     puts JSON.generate({
-      available: true, action: "stats",
-      counts: counts, queue_depths: queue_depths, processes: processes
-    })
+                         available: true, action: "stats",
+                         counts: counts, queue_depths: queue_depths, processes: processes
+                       })
 
   # ─── List jobs by status ───────────────────────────────
   when "list"
@@ -223,7 +229,7 @@ begin
     scope = scope.merge(SolidQueue::Job.where(queue_name: params["queue"])) if params["queue"].present?
     scope = apply_class_filter(scope, params["class_name"])
     count = scope.count
-    if count > 0
+    if count.positive?
       job_ids = scope.pluck(:job_id)
       SolidQueue::FailedExecution.retry_all(SolidQueue::Job.where(id: job_ids))
     end
@@ -273,13 +279,13 @@ begin
   when "recurring"
     tasks = SolidQueue::RecurringTask.all.to_a
     last_enqueued = if tasks.any?
-      SolidQueue::RecurringExecution
-        .where(task_key: tasks.map(&:key))
-        .group(:task_key)
-        .maximum(:run_at)
-    else
-      {}
-    end
+                      SolidQueue::RecurringExecution
+                        .where(task_key: tasks.map(&:key))
+                        .group(:task_key)
+                        .maximum(:run_at)
+                    else
+                      {}
+                    end
     result = tasks.map do |task|
       {
         key: task.key, class_name: task.class_name, command: task.command,
@@ -299,9 +305,8 @@ begin
   else
     puts JSON.generate({ available: true, error: "Unknown action: #{action}" })
   end
-
 rescue ActiveRecord::RecordNotFound => e
   puts JSON.generate({ available: true, action: action, success: false, error: "Not found: #{e.message}" })
-rescue => e
+rescue StandardError => e
   puts JSON.generate({ available: true, action: action, success: false, error: "#{e.class}: #{e.message}" })
 end

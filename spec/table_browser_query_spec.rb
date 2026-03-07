@@ -168,7 +168,7 @@ RSpec.describe LazyRails::TableBrowser, "query features" do
 
   describe "render_row_data status line" do
     before do
-      browser.load_rows(["id", "name"], [["1", "Alice"]], total: 50)
+      browser.load_rows(%w[id name], [%w[1 Alice]], total: 50)
     end
 
     it "shows page info" do
@@ -179,14 +179,14 @@ RSpec.describe LazyRails::TableBrowser, "query features" do
 
     it "shows WHERE clause when set" do
       browser.set_where("id > 5")
-      browser.load_rows(["id", "name"], [["6", "Bob"]], total: 10)
+      browser.load_rows(%w[id name], [%w[6 Bob]], total: 10)
       output = browser.render(width: 80, height: 24)
       expect(output).to include("WHERE id > 5")
     end
 
     it "shows ORDER BY when set" do
       browser.set_order("name")
-      browser.load_rows(["id", "name"], [["1", "Alice"]], total: 50)
+      browser.load_rows(%w[id name], [%w[1 Alice]], total: 50)
       output = browser.render(width: 80, height: 24)
       expect(output).to include("ORDER BY name ASC")
     end

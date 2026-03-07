@@ -55,7 +55,7 @@ module LazyRails
 
       if msg.error
         load_fallback_data
-        [:routes, :database, :models, :rake].each { |t| find_panel(t).fail_loading(msg.error) }
+        %i[routes database models rake].each { |t| find_panel(t).fail_loading(msg.error) }
         find_panel(:status).fail_loading(msg.error)
       else
         @introspect_data = msg.data
@@ -65,7 +65,7 @@ module LazyRails
         db_panel = find_panel(:database)
         db_panel.finish_loading(items: msg.data.migrations)
         pending = Views::DatabaseView.pending_count(msg.data.migrations)
-        db_panel.update_title(pending > 0 ? "Database (#{pending} pending)" : "Database")
+        db_panel.update_title(pending.positive? ? "Database (#{pending} pending)" : "Database")
 
         find_panel(:models).finish_loading(items: msg.data.models)
         find_panel(:rake).finish_loading(items: msg.data.rake_tasks)
@@ -108,10 +108,10 @@ module LazyRails
       idx = tests_panel.items.index { |f| f.path == msg.path }
       if idx
         tests_panel.replace_item_at(idx, TestFile.new(
-          path: msg.path,
-          status: msg.status,
-          last_output: msg.output
-        ))
+                                           path: msg.path,
+                                           status: msg.status,
+                                           last_output: msg.output
+                                         ))
       end
       set_flash("#{msg.status == :passed ? "\u2713" : "\u2717"} #{msg.path}")
       update_detail_content
@@ -167,13 +167,13 @@ module LazyRails
         counts = msg.counts
         failed = counts[:failed] || 0
         total = counts.values.sum
-        title = if failed > 0
-          "Jobs (#{failed} failed)"
-        elsif total > 0
-          "Jobs (#{total})"
-        else
-          "Jobs"
-        end
+        title = if failed.positive?
+                  "Jobs (#{failed} failed)"
+                elsif total.positive?
+                  "Jobs (#{total})"
+                else
+                  "Jobs"
+                end
         panel.update_title(title)
       end
       update_detail_content
@@ -189,20 +189,20 @@ module LazyRails
     end
 
     def handle_mailer_preview_loaded(msg)
-      if msg.error
-        @mailer_preview_content = { error: msg.error }
-      else
-        @mailer_preview_content = {
-          subject: msg.subject, to: msg.to, from: msg.from, body: msg.body
-        }
-      end
+      @mailer_preview_content = if msg.error
+                                  { error: msg.error }
+                                else
+                                  {
+                                    subject: msg.subject, to: msg.to, from: msg.from, body: msg.body
+                                  }
+                                end
       update_detail_content
     end
 
     def handle_resize(msg)
       @width = msg.width
       @height = msg.height
-      right_width = @width - (@width * LEFT_WIDTH_RATIO).to_i - 1
+      right_width = @width - (@width * App::LEFT_WIDTH_RATIO).to_i - 1
       @detail_viewport.set_width(right_width - 4)
       @detail_viewport.set_height(@height - 4)
       update_detail_content

@@ -19,14 +19,14 @@ module LazyRails
         lines << "> #{entry.expression}"
         lines << ""
 
-        if entry.success?
-          lines << "=> #{entry.result}"
-        else
-          lines << Flourish::Style.new.foreground("#ff6347").render("Error: #{entry.error}")
-        end
+        lines << if entry.success?
+                   "=> #{entry.result}"
+                 else
+                   Flourish::Style.new.foreground("#ff6347").render("Error: #{entry.error}")
+                 end
 
         lines << ""
-        duration = "%.1fs" % (entry.duration_ms / 1000.0)
+        duration = format("%.1fs", entry.duration_ms / 1000.0)
         lines << "Ran in #{duration} via rails runner"
         lines.join("\n")
       end

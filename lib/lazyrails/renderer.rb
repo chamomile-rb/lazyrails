@@ -26,11 +26,11 @@ module LazyRails
 
         border_color = focused ? FOCUSED_COLOR : UNFOCUSED_COLOR
         box = Flourish::Style.new
-          .width(width)
-          .height(h)
-          .border(Flourish::Border::ROUNDED)
-          .border_foreground(border_color)
-          .render(content)
+                             .width(width)
+                             .height(h)
+                             .border(Flourish::Border::ROUNDED)
+                             .border_foreground(border_color)
+                             .render(content)
 
         box_lines = box.lines
         if box_lines.any?
@@ -63,9 +63,7 @@ module LazyRails
     def render_panel_content(panel, width:, height:, focused:)
       return "Loading..." if panel.loading
 
-      if panel.error && panel.items.empty?
-        return Views::ErrorView.render(panel.error.to_s, width: width)
-      end
+      return Views::ErrorView.render(panel.error.to_s, width: width) if panel.error && panel.items.empty?
 
       case panel.type
       when :status
@@ -119,11 +117,11 @@ module LazyRails
       border_color = UNFOCUSED_COLOR
 
       box = Flourish::Style.new
-        .width(width)
-        .height(@height - 2)
-        .border(Flourish::Border::ROUNDED)
-        .border_foreground(border_color)
-        .render(content)
+                           .width(width)
+                           .height(@height - 2)
+                           .border(Flourish::Border::ROUNDED)
+                           .border_foreground(border_color)
+                           .render(content)
 
       box_lines = box.lines
       if box_lines.any?
@@ -140,50 +138,70 @@ module LazyRails
       item = panel.selected_item
 
       @detail_content = case panel.type
-      when :status
-        Views::StatusView.render_detail(@about_data, @stats_data, @notes_data, width: detail_width)
-      when :server
-        Views::ServerView.render_detail(@server, width: detail_width)
-      when :routes
-        item ? Views::RoutesView.render_detail(item, @project.dir, width: detail_width, file_cache: @file_cache) : "Select a route."
-      when :database
-        item ? Views::DatabaseView.render_detail(item, @project.dir, width: detail_width, file_cache: @file_cache) : "Select a migration."
-      when :models
-        item ? Views::ModelsView.render_detail(item, width: detail_width) : "Select a model."
-      when :tests
-        item ? Views::TestsView.render_detail(item, width: detail_width) : "Select a test file."
-      when :gems
-        item ? Views::GemsView.render_detail(item, width: detail_width) : "Select a gem."
-      when :rake
-        item ? Views::RakeView.render_detail(item, width: detail_width) : "Select a rake task."
-      when :console
-        item ? Views::ConsoleView.render_detail(item, width: detail_width) : "Press e to evaluate a Ruby expression."
-      when :credentials
-        render_credentials_detail(item, detail_width)
-      when :logs
-        item ? Views::LogView.render_detail(item, width: detail_width) : "Waiting for log entries..."
-      when :mailers
-        render_mailer_detail(item, detail_width)
-      when :jobs
-        item ? Views::JobsView.render_detail(item, width: detail_width) : "Select a job."
-      when :custom
-        item ? Views::CustomCommandsView.render_detail(item, width: detail_width) : "Select a command."
-      else
-        ""
-      end
+                        when :status
+                          Views::StatusView.render_detail(@about_data, @stats_data, @notes_data, width: detail_width)
+                        when :server
+                          Views::ServerView.render_detail(@server, width: detail_width)
+                        when :routes
+                          if item
+                            Views::RoutesView.render_detail(item, @project.dir, width: detail_width,
+                                                                                file_cache: @file_cache)
+                          else
+                            "Select a route."
+                          end
+                        when :database
+                          if item
+                            Views::DatabaseView.render_detail(item, @project.dir, width: detail_width,
+                                                                                  file_cache: @file_cache)
+                          else
+                            "Select a migration."
+                          end
+                        when :models
+                          item ? Views::ModelsView.render_detail(item, width: detail_width) : "Select a model."
+                        when :tests
+                          item ? Views::TestsView.render_detail(item, width: detail_width) : "Select a test file."
+                        when :gems
+                          item ? Views::GemsView.render_detail(item, width: detail_width) : "Select a gem."
+                        when :rake
+                          item ? Views::RakeView.render_detail(item, width: detail_width) : "Select a rake task."
+                        when :console
+                          if item
+                            Views::ConsoleView.render_detail(item,
+                                                             width: detail_width)
+                          else
+                            "Press e to evaluate a Ruby expression."
+                          end
+                        when :credentials
+                          render_credentials_detail(item, detail_width)
+                        when :logs
+                          item ? Views::LogView.render_detail(item, width: detail_width) : "Waiting for log entries..."
+                        when :mailers
+                          render_mailer_detail(item, detail_width)
+                        when :jobs
+                          item ? Views::JobsView.render_detail(item, width: detail_width) : "Select a job."
+                        when :custom
+                          if item
+                            Views::CustomCommandsView.render_detail(item,
+                                                                    width: detail_width)
+                          else
+                            "Select a command."
+                          end
+                        else
+                          ""
+                        end
     end
 
     def render_status_bar
       left = if @flash.active?
-        "  #{@flash.message}"
-      else
-        " Tab navigate \u2502 j/k scroll \u2502 Enter select \u2502 L log \u2502 ? help \u2502 q quit"
-      end
+               "  #{@flash.message}"
+             else
+               " Tab navigate \u2502 j/k scroll \u2502 Enter select \u2502 L log \u2502 ? help \u2502 q quit"
+             end
 
       Flourish::Style.new
-        .foreground("#666666")
-        .width(@width)
-        .render(left.slice(0, @width))
+                     .foreground("#666666")
+                     .width(@width)
+                     .render(left.slice(0, @width))
     end
 
     def render_filter_bar
@@ -206,6 +224,7 @@ module LazyRails
 
     def render_credentials_detail(item, width)
       return "Select a credential file." unless item
+
       if @credentials_content
         Views::CredentialsView.render_detail_content(item, @credentials_content, width: width)
       else
@@ -215,6 +234,7 @@ module LazyRails
 
     def render_mailer_detail(item, width)
       return "Select a mailer preview." unless item
+
       if @mailer_preview_content
         Views::MailerView.render_detail_content(item, @mailer_preview_content, width: width)
       else

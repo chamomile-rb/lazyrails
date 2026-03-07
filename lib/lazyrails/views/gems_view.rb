@@ -16,9 +16,9 @@ module LazyRails
       def self.render_detail(gem_entry, width:)
         lines = []
         lines << "#{gem_entry.name} (#{gem_entry.version})"
-        lines << "=" * [width - 4, 40].min
+        lines << ("=" * [width - 4, 40].min)
         lines << ""
-        lines << "Groups: #{gem_entry.groups.map(&:to_s).join(", ")}"
+        lines << "Groups: #{gem_entry.groups.join(', ')}"
         lines.join("\n")
       end
     end

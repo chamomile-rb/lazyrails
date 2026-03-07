@@ -26,8 +26,10 @@ module LazyRails
 
     def handle_key(key)
       case key
-      when :escape then hide; nil
-      when "L"     then hide; nil
+      when :escape then hide
+                        nil
+      when "L"     then hide
+                        nil
       when "j", :down
         max = [@command_log.size - 1, 0].max
         @cursor = [@cursor + 1, max].min
@@ -45,9 +47,7 @@ module LazyRails
     end
 
     def render(width:)
-      if @command_log.empty?
-        return "No commands executed yet.\n\nPress L or Esc to close."
-      end
+      return "No commands executed yet.\n\nPress L or Esc to close." if @command_log.empty?
 
       header = Flourish::Style.new.bold.render("Command Log")
       list = Views::CommandLogView.render(@command_log, width: width - 4, selected: @cursor)

@@ -9,9 +9,7 @@ module LazyRails
     def read(path)
       return @cache[path] if @cache.key?(path)
 
-      @cache[path] = if File.exist?(path)
-        File.read(path)
-      end
+      @cache[path] = (File.read(path) if File.exist?(path))
     end
 
     def invalidate

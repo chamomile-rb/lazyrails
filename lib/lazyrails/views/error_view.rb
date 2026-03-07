@@ -15,15 +15,13 @@ module LazyRails
       def self.render(error_text, width:)
         lines = []
         lines << Flourish::Style.new.foreground("#ff6347").bold.render("Error")
-        lines << "=" * [width - 4, 40].min
+        lines << ("=" * [width - 4, 40].min)
         lines << ""
         lines << error_text
         lines << ""
 
         suggestion = detect_suggestion(error_text)
-        if suggestion
-          lines << Flourish::Style.new.foreground("#e5c07b").render("Suggestion: #{suggestion}")
-        end
+        lines << Flourish::Style.new.foreground("#e5c07b").render("Suggestion: #{suggestion}") if suggestion
 
         lines.join("\n")
       end

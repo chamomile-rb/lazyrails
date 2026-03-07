@@ -76,7 +76,7 @@ module LazyRails
 
     def self.detect_ruby_version
       `ruby -v`.strip.match(/ruby (\S+)/)[1]
-    rescue
+    rescue StandardError
       nil
     end
 

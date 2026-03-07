@@ -5,7 +5,7 @@ module LazyRails
     def self.truncate(str, max)
       return str if max < 1 || str.length <= max
 
-      str[0..max - 2] + "\u2026"
+      "#{str[0..(max - 2)]}…"
     end
 
     def self.classify_name(name)

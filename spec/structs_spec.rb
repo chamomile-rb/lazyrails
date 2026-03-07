@@ -53,7 +53,8 @@ RSpec.describe "New structs" do
 
   describe LazyRails::CredentialFile do
     it "renders environment when key exists" do
-      cred = described_class.new(environment: "production", path: "/config/credentials/production.yml.enc", exists: true)
+      cred = described_class.new(environment: "production", path: "/config/credentials/production.yml.enc",
+                                 exists: true)
       expect(cred.to_s).to eq("production")
     end
 
@@ -65,7 +66,8 @@ RSpec.describe "New structs" do
 
   describe LazyRails::MailerPreview do
     let(:preview) do
-      described_class.new(mailer_class: "UserMailer", method_name: "welcome", preview_path: "test/mailers/previews/user_mailer_preview.rb")
+      described_class.new(mailer_class: "UserMailer", method_name: "welcome",
+                          preview_path: "test/mailers/previews/user_mailer_preview.rb")
     end
 
     it "renders method name with indent" do

@@ -67,14 +67,14 @@ module LazyRails
     private
 
     def check_confirmation
-      case @tier
-      when :red
-        @confirmed = @input_text.strip == @required_text
-      when :yellow
-        @confirmed = @input_text.strip.downcase == "y"
-      else
-        @confirmed = true
-      end
+      @confirmed = case @tier
+                   when :red
+                     @input_text.strip == @required_text
+                   when :yellow
+                     @input_text.strip.downcase == "y"
+                   else
+                     true
+                   end
     end
 
     def detect_tier(cmd) = self.class.detect_tier(cmd)

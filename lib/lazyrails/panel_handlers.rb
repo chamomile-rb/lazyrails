@@ -64,6 +64,14 @@ module LazyRails
       when "u"
         migration = current_panel.selected_item
         return run_rails_cmd("bin/rails db:migrate:up VERSION=#{migration.version}", :database) if migration
+      when "s"
+        start_confirmation("bin/rails db:seed", tier: :yellow)
+      when "C"
+        return run_rails_cmd("bin/rails db:create", :database)
+      when "D"
+        start_confirmation("bin/rails db:drop", tier: :red, required_text: "database")
+      when "r"
+        start_confirmation("bin/rails db:reset", tier: :red, required_text: "database")
       end
       nil
     end
@@ -96,9 +104,7 @@ module LazyRails
     end
 
     def handle_models_key(msg)
-      if msg.key == "g"
-        @input_mode.start_input(:generate_model, prompt: "Model name: ", placeholder: "User name:string email:string")
-      end
+      @input_mode.start_input(:generate_model, prompt: "Model name: ", placeholder: "User name:string email:string") if msg.key == "g"
       nil
     end
 
@@ -204,9 +210,7 @@ module LazyRails
       item = current_panel.selected_item
       return nil unless item
 
-      if msg.key == item.key
-        start_confirmation(item.command.split, tier: item.confirmation_tier)
-      end
+      start_confirmation(item.command.split, tier: item.confirmation_tier) if msg.key == item.key
       nil
     end
 
@@ -244,7 +248,7 @@ module LazyRails
       @menu.show(title: current_panel.title, items: items)
     end
 
-    def panel_menu_items(panel) # rubocop:disable Metrics/MethodLength
+    def panel_menu_items(panel)
       case panel.type
       when :server
         server_menu_items
@@ -255,7 +259,11 @@ module LazyRails
           menu_item("Create migration", "c", :db_create_migration),
           menu_item("Browse tables", "t", :db_browse_tables),
           menu_item("Migrate down (selected)", "d", :db_migrate_down),
-          menu_item("Migrate up (selected)", "u", :db_migrate_up)
+          menu_item("Migrate up (selected)", "u", :db_migrate_up),
+          menu_item("Seed database", "s", :db_seed),
+          menu_item("Create database", "C", :db_create),
+          menu_item("Drop database", "D", :db_drop),
+          menu_item("Reset database", "r", :db_reset)
         ]
       when :tests
         [
@@ -306,7 +314,7 @@ module LazyRails
       end
     end
 
-    def handle_menu_action(action) # rubocop:disable Metrics/MethodLength
+    def handle_menu_action(action)
       case action
       when :server_start     then server_start_action
       when :server_stop      then server_stop_action
@@ -314,10 +322,15 @@ module LazyRails
       when :server_port      then @input_mode.start_input(:change_port, prompt: "Port: ", placeholder: "3000")
       when :db_migrate       then return run_rails_cmd("bin/rails db:migrate", :database)
       when :db_rollback      then start_confirmation("bin/rails db:rollback", tier: :yellow)
-      when :db_create_migration then @input_mode.start_input(:migration_name, prompt: "Migration name: ", placeholder: "CreateUsers")
+      when :db_create_migration then @input_mode.start_input(:migration_name, prompt: "Migration name: ",
+                                                                              placeholder: "CreateUsers")
       when :db_browse_tables then browse_tables_action
       when :db_migrate_down  then migrate_down_action
       when :db_migrate_up    then return migrate_up_action
+      when :db_seed          then start_confirmation("bin/rails db:seed", tier: :yellow)
+      when :db_create        then return run_rails_cmd("bin/rails db:create", :database)
+      when :db_drop          then start_confirmation("bin/rails db:drop", tier: :red, required_text: "database")
+      when :db_reset         then start_confirmation("bin/rails db:reset", tier: :red, required_text: "database")
       when :test_run_selected then return run_test_file_cmd(current_panel.selected_item) if current_panel.selected_item
       when :test_run_all     then return run_rails_cmd(test_all_command, :tests)
       when :test_run_failed  then return run_rails_cmd(test_failed_command, :tests)
@@ -325,7 +338,8 @@ module LazyRails
       when :gem_update_all   then start_confirmation("bundle update", tier: :yellow)
       when :gem_open         then return gem_open_action
       when :routes_toggle_group then toggle_route_grouping
-      when :model_generate   then @input_mode.start_input(:generate_model, prompt: "Model name: ", placeholder: "User name:string email:string")
+      when :model_generate   then @input_mode.start_input(:generate_model, prompt: "Model name: ",
+                                                                           placeholder: "User name:string email:string")
       when :console_eval     then @input_mode.start_input(:eval_expression, prompt: "ruby> ", placeholder: "User.count")
       when :console_open     then return exec("bin/rails", "console")
       when :credentials_decrypt then return decrypt_selected_credential
@@ -357,20 +371,20 @@ module LazyRails
         current_panel.reset_cursor
         nil
       when :migration_name
-        return run_rails_cmd(%w[bin/rails generate migration] + value.split, :database) unless value.empty?
+        run_rails_cmd(%w[bin/rails generate migration] + value.split, :database) unless value.empty?
       when :generate_model
-        return run_rails_cmd(%w[bin/rails generate model] + value.split, :models) unless value.empty?
+        run_rails_cmd(%w[bin/rails generate model] + value.split, :models) unless value.empty?
       when :eval_expression
-        return run_eval_cmd(value) unless value.empty?
+        run_eval_cmd(value) unless value.empty?
       when :table_where
         @table_browser.set_where(value)
-        return load_table_rows_cmd(@table_browser.selected_table) if @table_browser.selected_table
+        load_table_rows_cmd(@table_browser.selected_table) if @table_browser.selected_table
       when :table_order
         @table_browser.set_order(value)
-        return load_table_rows_cmd(@table_browser.selected_table) if @table_browser.selected_table
+        load_table_rows_cmd(@table_browser.selected_table) if @table_browser.selected_table
       when :change_port
         port = value.to_i
-        if port > 0 && port < 65_536
+        if port.positive? && port < 65_536
           @server.port = port
           set_flash("Port changed to #{port}")
         else
@@ -467,17 +481,17 @@ module LazyRails
 
     def migrate_up_action
       migration = current_panel.selected_item
-      return run_rails_cmd("bin/rails db:migrate:up VERSION=#{migration.version}", :database) if migration
+      run_rails_cmd("bin/rails db:migrate:up VERSION=#{migration.version}", :database) if migration
     end
 
     def gem_update_action
       gem_entry = current_panel.selected_item
-      return run_rails_cmd(["bundle", "update", gem_entry.name], :gems) if gem_entry
+      run_rails_cmd(["bundle", "update", gem_entry.name], :gems) if gem_entry
     end
 
     def gem_open_action
       gem_entry = current_panel.selected_item
-      return open_gem_homepage(gem_entry) if gem_entry
+      open_gem_homepage(gem_entry) if gem_entry
     end
 
     def toggle_log_filter(kind)
@@ -555,7 +569,7 @@ module LazyRails
     end
 
     def show_generator_menu
-      items = GENERATOR_TYPES.map do |gt|
+      items = App::GENERATOR_TYPES.map do |gt|
         menu_item(gt[:label], nil, :"generate_#{gt[:type]}")
       end
       @menu.show(title: "Generate", items: items)
@@ -566,7 +580,7 @@ module LazyRails
       return unless gen_match
 
       gen_type = gen_match[1]
-      gt = GENERATOR_TYPES.find { |g| g[:type] == gen_type }
+      gt = App::GENERATOR_TYPES.find { |g| g[:type] == gen_type }
       return unless gt
 
       @input_mode.start_input(:"generate_#{gen_type}", prompt: "#{gt[:label]} args: ", placeholder: gt[:placeholder])
@@ -574,10 +588,10 @@ module LazyRails
 
     def handle_generator_submit(value, purpose)
       gen_match = purpose.to_s.match(/\Agenerate_(.+)\z/)
-      if gen_match && !value.empty?
-        gen_type = gen_match[1]
-        return run_rails_cmd(%W[bin/rails generate #{gen_type}] + value.split, :models)
-      end
+      return unless gen_match && !value.empty?
+
+      gen_type = gen_match[1]
+      run_rails_cmd(%W[bin/rails generate #{gen_type}] + value.split, :models)
     end
   end
 end

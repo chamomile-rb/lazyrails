@@ -20,7 +20,7 @@ module LazyRails
         lines = []
         lines << "Migration: #{migration.name}"
         lines << "Version:   #{migration.version}"
-        lines << "Status:    #{migration.up? ? "UP" : "DOWN"}"
+        lines << "Status:    #{migration.up? ? 'UP' : 'DOWN'}"
         lines << "Database:  #{migration.database}"
         lines << ""
 
@@ -38,7 +38,7 @@ module LazyRails
 
           if content
             lines << "File: #{migration.file_path}"
-            lines << "=" * [width - 4, 40].min
+            lines << ("=" * [width - 4, 40].min)
             lines << ""
             lines << content
           else
@@ -49,7 +49,7 @@ module LazyRails
         lines.join("\n")
       end
 
-      def self.render_schema_diff(migration, content, width)
+      def self.render_schema_diff(migration, content, _width)
         diffs = Parsers::MigrationDiff.parse(content)
         return [] if diffs.empty?
 
@@ -57,10 +57,10 @@ module LazyRails
         lines << "\u2193 #{migration.name}"
         lines << ""
         lines << "Schema impact:"
-        lines << "\u2500" * 14
+        lines << ("\u2500" * 14)
 
         tables = diffs.map(&:table).compact.uniq
-        lines << "  table: #{tables.join(", ")}" if tables.any?
+        lines << "  table: #{tables.join(', ')}" if tables.any?
         lines << ""
 
         diffs.each do |d|
@@ -82,7 +82,6 @@ module LazyRails
       def self.pending_count(migrations)
         migrations.count(&:down?)
       end
-
     end
   end
 end

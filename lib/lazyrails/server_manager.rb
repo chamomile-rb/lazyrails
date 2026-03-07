@@ -64,7 +64,7 @@ module LazyRails
                   @log_lines << line
                   @log_lines.shift if @log_lines.size > MAX_LOG_LINES
                   @log_dirty = true
-                  @state = :running if @state == :starting && line.include?("Listening on")
+                  @state = :running if @state == :starting && server_ready?(line)
                 end
               end
 
@@ -75,7 +75,7 @@ module LazyRails
               end
             end
           end
-        rescue => e
+        rescue StandardError => e
           @mutex.synchronize do
             @state = :error
             @log_lines << "Error: #{e.message}\n"
@@ -98,6 +98,7 @@ module LazyRails
         loop do
           break if @mutex.synchronize { @pid.nil? }
           break if Time.now >= deadline
+
           sleep 0.1
         end
 
@@ -135,6 +136,16 @@ module LazyRails
         @log_dirty = false
         @log_lines.join
       end
+    end
+
+    private
+
+    # Detect server startup across common Ruby servers
+    def server_ready?(line)
+      line.include?("Listening on") ||     # Puma
+        line.include?("listening on") ||   # Falcon, Vite
+        line.include?("port=") ||          # WEBrick ("port=3000")
+        line.include?("Ctrl-C to stop")    # WEBrick, Thin
     end
   end
 end

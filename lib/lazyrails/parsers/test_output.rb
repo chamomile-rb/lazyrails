@@ -4,7 +4,10 @@ module LazyRails
   module Parsers
     module TestOutput
       def self.parse(raw_output, file: nil)
-        return TestResult.new(file: file, passed: 0, failed: 0, errors: 0, output: "") if raw_output.nil? || raw_output.empty?
+        if raw_output.nil? || raw_output.empty?
+          return TestResult.new(file: file, passed: 0, failed: 0, errors: 0,
+                                output: "")
+        end
 
         passed = 0
         failed = 0
@@ -15,13 +18,13 @@ module LazyRails
           total = match[1].to_i
           failed = match[2].to_i
           errors = match[3].to_i
-          skips = match[4]&.to_i || 0
+          skips = match[4].to_i
           passed = total - failed - errors - skips
         # RSpec: 5 examples, 0 failures, 1 pending
         elsif (match = raw_output.match(/(\d+)\s+examples?,\s+(\d+)\s+failures?(?:,\s+(\d+)\s+pending)?/))
           total = match[1].to_i
           failed = match[2].to_i
-          pending = match[3]&.to_i || 0
+          pending = match[3].to_i
           passed = total - failed - pending
         end
 

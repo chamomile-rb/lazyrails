@@ -4,21 +4,21 @@ module LazyRails
   module Views
     module JobsView
       STATUS_ICONS = {
-        "ready"     => "\u25CB",  # ○
-        "claimed"   => "\u25D1",  # ◑
-        "failed"    => "\u2717",  # ✗
-        "scheduled" => "\u23F0",  # ⏰
-        "blocked"   => "\u26D4",  # ⛔
-        "finished"  => "\u2713"   # ✓
+        "ready" => "\u25CB", # ○
+        "claimed" => "\u25D1", # ◑
+        "failed" => "\u2717", # ✗
+        "scheduled" => "\u23F0", # ⏰
+        "blocked" => "\u26D4", # ⛔
+        "finished" => "\u2713" # ✓
       }.freeze
 
       STATUS_COLORS = {
-        "ready"     => "#04b575",
-        "claimed"   => "#e5c07b",
-        "failed"    => "#ff6347",
+        "ready" => "#04b575",
+        "claimed" => "#e5c07b",
+        "failed" => "#ff6347",
         "scheduled" => "#888888",
-        "blocked"   => "#888888",
-        "finished"  => "#666666"
+        "blocked" => "#888888",
+        "finished" => "#666666"
       }.freeze
 
       def self.render_item(job, selected:, width:)
@@ -40,25 +40,25 @@ module LazyRails
         lines << ""
 
         lines << "ID:           #{job.id}"
-        lines << "Active Job:   #{job.active_job_id || "n/a"}"
+        lines << "Active Job:   #{job.active_job_id || 'n/a'}"
         lines << "Queue:        #{job.queue_name}"
         lines << "Status:       #{job.status}"
-        lines << "Priority:     #{job.priority || "n/a"}"
-        lines << "Created:      #{job.created_at || "n/a"}"
+        lines << "Priority:     #{job.priority || 'n/a'}"
+        lines << "Created:      #{job.created_at || 'n/a'}"
 
         case job.status
         when "scheduled"
-          lines << "Scheduled At: #{job.scheduled_at || "n/a"}"
+          lines << "Scheduled At: #{job.scheduled_at || 'n/a'}"
         when "claimed"
-          lines << "Worker ID:    #{job.worker_id || "n/a"}"
-          lines << "Started At:   #{job.started_at || "n/a"}"
+          lines << "Worker ID:    #{job.worker_id || 'n/a'}"
+          lines << "Started At:   #{job.started_at || 'n/a'}"
         when "finished"
-          lines << "Finished At:  #{job.finished_at || "n/a"}"
+          lines << "Finished At:  #{job.finished_at || 'n/a'}"
         when "blocked"
-          lines << "Concurrency:  #{job.concurrency_key || "n/a"}"
-          lines << "Expires At:   #{job.expires_at || "n/a"}"
+          lines << "Concurrency:  #{job.concurrency_key || 'n/a'}"
+          lines << "Expires At:   #{job.expires_at || 'n/a'}"
         when "failed"
-          lines << "Failed At:    #{job.failed_at || "n/a"}"
+          lines << "Failed At:    #{job.failed_at || 'n/a'}"
         end
 
         # Arguments
@@ -68,7 +68,7 @@ module LazyRails
           begin
             parsed = job.arguments.is_a?(String) ? JSON.parse(job.arguments) : job.arguments
             lines << JSON.pretty_generate(parsed)
-          rescue
+          rescue StandardError
             lines << job.arguments.to_s
           end
         end

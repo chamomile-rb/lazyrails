@@ -47,9 +47,7 @@ module LazyRails
       @config = Config.load(project.dir)
       @panels = PANEL_DEFS.map { |d| Panel.new(type: d[:type], title: d[:title]) }
 
-      unless @config.empty?
-        @panels << Panel.new(type: :custom, title: "Custom")
-      end
+      @panels << Panel.new(type: :custom, title: "Custom") unless @config.empty?
 
       @focused_panel = 0
       @width = 80
@@ -65,6 +63,8 @@ module LazyRails
       @menu = MenuOverlay.new
       @table_browser = TableBrowser.new
       @input_mode = InputMode.new
+      @welcome = WelcomeOverlay.new
+      @user_settings = UserSettings.new
 
       # Data stores
       @introspect_data = nil
@@ -98,7 +98,7 @@ module LazyRails
     def start
       unless @config.empty?
         custom_panel = find_panel(:custom)
-        custom_panel.finish_loading(items: @config.custom_commands) if custom_panel
+        custom_panel&.finish_loading(items: @config.custom_commands)
       end
 
       # These panels are event-driven, not loaded from a command
@@ -108,6 +108,7 @@ module LazyRails
       find_panel(:jobs)&.finish_loading(items: [])
 
       discover_credentials
+      @welcome.show unless @user_settings.welcome_seen?
 
       @log_watcher.start
 
@@ -122,6 +123,7 @@ module LazyRails
     end
 
     def update(msg)
+      return handle_welcome(msg) if @welcome.visible? && msg.is_a?(Chamomile::KeyMsg)
       return handle_confirmation(msg) if @confirmation
       return handle_input_mode(msg) if @input_mode.active?
 
@@ -148,6 +150,7 @@ module LazyRails
     end
 
     def view
+      return @welcome.render(width: @width, height: @height) if @welcome.visible?
       return render_help if @show_help
       return @command_log_overlay.render(width: @width) if @command_log_overlay.visible?
       return @table_browser.render(width: @width, height: @height) if @table_browser.visible?
@@ -162,14 +165,12 @@ module LazyRails
       layout = Flourish.join_horizontal(Flourish::TOP, left_content, " ", right_content)
 
       if @confirmation
-        layout = "#{layout}\n#{render_confirmation}"
+        "#{layout}\n#{render_confirmation}"
       elsif @input_mode.active?
-        layout = "#{layout}\n#{render_filter_bar}"
+        "#{layout}\n#{render_filter_bar}"
       else
-        layout = "#{layout}\n#{render_status_bar}"
+        "#{layout}\n#{render_status_bar}"
       end
-
-      layout
     end
 
     private
@@ -218,6 +219,20 @@ module LazyRails
       @flash.set(message, duration: duration)
     end
 
+    def handle_welcome(msg)
+      signal = @welcome.handle_key(msg.key)
+      case signal
+      when :dismiss
+        @welcome.hide
+      when :dismiss_forever
+        @welcome.hide
+        @user_settings.mark_welcome_seen!
+      when :quit
+        return shutdown
+      end
+      nil
+    end
+
     def shutdown
       @server.stop
       @log_watcher.stop
@@ -235,7 +250,12 @@ module LazyRails
     end
 
     def test_failed_command
-      File.directory?(File.join(@project.dir, "spec")) ? "bundle exec rspec --only-failures" : "bin/rails test --fail-fast"
+      if File.directory?(File.join(@project.dir,
+                                   "spec"))
+        "bundle exec rspec --only-failures"
+      else
+        "bin/rails test --fail-fast"
+      end
     end
 
     def toggle_route_grouping
@@ -243,12 +263,16 @@ module LazyRails
       return unless @introspect_data
 
       items = if @route_grouped
-        @route_grouped = false
-        @introspect_data.routes
-      else
-        @route_grouped = true
-        @introspect_data.routes.sort_by { |r| r.action.split("#").first rescue "zzz" }
-      end
+                @route_grouped = false
+                @introspect_data.routes
+              else
+                @route_grouped = true
+                @introspect_data.routes.sort_by do |r|
+                  r.action.split("#").first
+                rescue StandardError
+                  "zzz"
+                end
+              end
       panel.finish_loading(items: items)
       panel.reset_cursor
     end
@@ -256,6 +280,7 @@ module LazyRails
     def detect_rake_tier(name)
       return :red    if name.include?("drop") || name.include?("purge")
       return :yellow if name.include?("seed") || name.include?("reset")
+
       :green
     end
 
@@ -265,7 +290,8 @@ module LazyRails
 
       if item.exists
         env = item.environment.gsub(" (default)", "")
-        start_confirmation("bin/rails credentials:show --environment #{env}", tier: :yellow)
+        cmd = ["bin/rails", "credentials:show", "--environment", env]
+        start_confirmation(cmd, tier: :yellow)
         @pending_credential = item
       else
         set_flash("Key file missing for #{item.environment}")
@@ -276,10 +302,10 @@ module LazyRails
     def apply_log_filter(panel)
       entries = @all_log_entries || []
       filtered = case @log_filter
-      when :slow   then entries.select(&:slow?)
-      when :errors then entries.select { |e| e.status.to_i >= 400 }
-      else entries
-      end
+                 when :slow   then entries.select(&:slow?)
+                 when :errors then entries.select { |e| e.status.to_i >= 400 }
+                 else entries
+                 end
       panel.finish_loading(items: filtered)
     end
 
@@ -287,13 +313,14 @@ module LazyRails
 
     def handle_key(msg)
       if @show_help
-        @show_help = false if msg.key == "?" || msg.key == :escape
+        @show_help = false if ["?", :escape].include?(msg.key)
         return msg.key == "q" ? shutdown : nil
       end
 
       if @command_log_overlay.visible?
         signal = @command_log_overlay.handle_key(msg.key)
         return shutdown if signal == :quit
+
         return nil
       end
 
@@ -301,12 +328,11 @@ module LazyRails
         result = @menu.handle_key(msg.key)
         return shutdown if result == :quit
         return handle_menu_action(result) if result && result != :quit
+
         return nil
       end
 
-      if @table_browser.visible?
-        return handle_table_browser_key(msg)
-      end
+      return handle_table_browser_key(msg) if @table_browser.visible?
 
       if msg.key == :tab && msg.shift?
         clear_panel_state
@@ -495,13 +521,13 @@ module LazyRails
 
     def load_fallback_data
       schema_path = File.join(@project.dir, "db/schema.rb")
-      if File.exist?(schema_path)
-        tables = Parsers::Schema.parse(File.read(schema_path))
-        models = tables.map do |table_name, cols|
-          ModelInfo.new(name: ViewHelpers.classify_name(table_name), table_name: table_name, columns: cols)
-        end
-        find_panel(:models).finish_loading(items: models)
+      return unless File.exist?(schema_path)
+
+      tables = Parsers::Schema.parse(File.read(schema_path))
+      models = tables.map do |table_name, cols|
+        ModelInfo.new(name: ViewHelpers.classify_name(table_name), table_name: table_name, columns: cols)
       end
+      find_panel(:models).finish_loading(items: models)
     end
   end
 end

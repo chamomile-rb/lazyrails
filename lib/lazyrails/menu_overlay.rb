@@ -78,11 +78,11 @@ module LazyRails
       footer = "j/k navigate | Enter select | Esc close"
 
       box = Flourish::Style.new
-        .width(menu_width)
-        .border(Flourish::Border::ROUNDED)
-        .border_foreground("#7d56f4")
-        .padding(0, 1)
-        .render("#{content}\n\n#{footer}")
+                           .width(menu_width)
+                           .border(Flourish::Border::ROUNDED)
+                           .border_foreground("#7d56f4")
+                           .padding(0, 1)
+                           .render("#{content}\n\n#{footer}")
 
       # Inject title into top border
       box_lines = box.lines
@@ -104,7 +104,7 @@ module LazyRails
 
       item = @items[@cursor]
       hide
-      @callback&.call(item.action) if @callback
+      @callback&.call(item.action)
       item.action
     end
   end

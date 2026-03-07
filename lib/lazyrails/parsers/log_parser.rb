@@ -28,17 +28,17 @@ module LazyRails
             next
           end
 
-          if current_block
-            current_raw << line
+          next unless current_block
 
-            if (m = line.match(COMPLETED_LINE))
-              current_block[:status] = m[1]
-              current_block[:duration_ms] = m[2].to_i
-            end
+          current_raw << line
 
-            if (m = line.match(SQL_LINE))
-              current_sql << { query: m[1], duration_ms: m[2].to_f }
-            end
+          if (m = line.match(COMPLETED_LINE))
+            current_block[:status] = m[1]
+            current_block[:duration_ms] = m[2].to_i
+          end
+
+          if (m = line.match(SQL_LINE))
+            current_sql << { query: m[1], duration_ms: m[2].to_f }
           end
         end
 

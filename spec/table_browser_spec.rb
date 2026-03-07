@@ -119,7 +119,7 @@ RSpec.describe LazyRails::TableBrowser do
     before do
       browser.show(table_names)
       browser.handle_key(:enter) # select first table
-      browser.load_rows(["id", "name"], [["1", "Alice"], ["2", "Bob"]])
+      browser.load_rows(%w[id name], [%w[1 Alice], %w[2 Bob]])
     end
 
     it "returns nil for j/k navigation" do
@@ -173,7 +173,7 @@ RSpec.describe LazyRails::TableBrowser do
     end
 
     it "builds table widget from columns and rows" do
-      browser.load_rows(["id", "name"], [["1", "Alice"], ["2", "Bob"]])
+      browser.load_rows(%w[id name], [%w[1 Alice], %w[2 Bob]])
       output = browser.render(width: 80, height: 24)
       expect(output).to include("comments") # table name in header
       expect(output).to include("id")
@@ -181,13 +181,13 @@ RSpec.describe LazyRails::TableBrowser do
     end
 
     it "handles NULL values" do
-      browser.load_rows(["id", "email"], [["1", nil]])
+      browser.load_rows(%w[id email], [["1", nil]])
       output = browser.render(width: 80, height: 24)
       expect(output).to include("NULL")
     end
 
     it "handles empty rows" do
-      browser.load_rows(["id", "name"], [])
+      browser.load_rows(%w[id name], [])
       output = browser.render(width: 80, height: 24)
       expect(output).to include("id")
       expect(output).to include("name")
@@ -255,7 +255,7 @@ RSpec.describe LazyRails::TableBrowser do
 
     it "shrinks column widths when there are many columns" do
       cols = (1..20).map { |i| "col#{i}" }
-      rows = [cols.map { |c| c.upcase }]
+      rows = [cols.map(&:upcase)]
       browser.load_rows(cols, rows)
       # Should not raise
       output = browser.render(width: 80, height: 24)

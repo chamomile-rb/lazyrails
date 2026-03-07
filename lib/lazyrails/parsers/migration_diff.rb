@@ -28,31 +28,38 @@ module LazyRails
 
           case stripped
           when ADD_COLUMN
-            extras = $4.to_s.strip.delete_prefix(",").strip
-            diffs << DiffLine.new(op: :add, table: $1, column: $2, type: $3, extras: extras.empty? ? nil : extras)
+            extras = ::Regexp.last_match(4).to_s.strip.delete_prefix(",").strip
+            diffs << DiffLine.new(op: :add, table: ::Regexp.last_match(1), column: ::Regexp.last_match(2),
+                                  type: ::Regexp.last_match(3), extras: extras.empty? ? nil : extras)
           when REMOVE_COLUMN
-            diffs << DiffLine.new(op: :remove, table: $1, column: $2, type: nil, extras: nil)
+            diffs << DiffLine.new(op: :remove, table: ::Regexp.last_match(1), column: ::Regexp.last_match(2),
+                                  type: nil, extras: nil)
           when CREATE_TABLE
-            diffs << DiffLine.new(op: :add, table: $1, column: nil, type: "TABLE", extras: nil)
+            diffs << DiffLine.new(op: :add, table: ::Regexp.last_match(1), column: nil, type: "TABLE", extras: nil)
           when DROP_TABLE
-            diffs << DiffLine.new(op: :remove, table: $1, column: nil, type: "TABLE", extras: nil)
+            diffs << DiffLine.new(op: :remove, table: ::Regexp.last_match(1), column: nil, type: "TABLE", extras: nil)
           when ADD_INDEX
-            diffs << DiffLine.new(op: :add, table: $1, column: nil, type: "INDEX", extras: $2.strip)
+            diffs << DiffLine.new(op: :add, table: ::Regexp.last_match(1), column: nil, type: "INDEX",
+                                  extras: ::Regexp.last_match(2).strip)
           when RENAME_COLUMN
-            diffs << DiffLine.new(op: :remove, table: $1, column: $2, type: nil, extras: nil)
-            diffs << DiffLine.new(op: :add, table: $1, column: $3, type: nil, extras: "(renamed from #{$2})")
+            diffs << DiffLine.new(op: :remove, table: ::Regexp.last_match(1), column: ::Regexp.last_match(2),
+                                  type: nil, extras: nil)
+            diffs << DiffLine.new(op: :add, table: ::Regexp.last_match(1), column: ::Regexp.last_match(3), type: nil,
+                                  extras: "(renamed from #{::Regexp.last_match(2)})")
           end
 
           # Handle t.string :name style inside create_table blocks
-          if stripped.match?(/\At\.(\w+)\s+:(\w+)/)
-            m = stripped.match(/\At\.(\w+)\s+:(\w+)(.*)/)
-            next unless m
-            type = m[1]
-            next if %w[timestamps index references].include?(type)
-            col = m[2]
-            extras = m[3].to_s.strip.delete_prefix(",").strip
-            diffs << DiffLine.new(op: :add, table: nil, column: col, type: type, extras: extras.empty? ? nil : extras)
-          end
+          next unless stripped.match?(/\At\.(\w+)\s+:(\w+)/)
+
+          m = stripped.match(/\At\.(\w+)\s+:(\w+)(.*)/)
+          next unless m
+
+          type = m[1]
+          next if %w[timestamps index references].include?(type)
+
+          col = m[2]
+          extras = m[3].to_s.strip.delete_prefix(",").strip
+          diffs << DiffLine.new(op: :add, table: nil, column: col, type: type, extras: extras.empty? ? nil : extras)
         end
 
         diffs

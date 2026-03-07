@@ -36,7 +36,7 @@ module LazyRails
       def self.render_detail(entry, width:)
         lines = []
         lines << "#{entry.verb} #{entry.path}"
-        lines << "=" * [width - 4, 40].min
+        lines << ("=" * [width - 4, 40].min)
         lines << ""
         lines << "Status:   #{entry.status}"
         lines << "Duration: #{entry.duration_ms}ms" if entry.duration_ms
@@ -44,7 +44,7 @@ module LazyRails
 
         if entry.sql_lines.any?
           lines << "SQL Queries:"
-          lines << "\u2500" * 12
+          lines << ("\u2500" * 12)
           entry.sql_lines.each do |sql|
             dur = sql[:duration_ms]
             color = dur.to_f > 100 ? "#ff6347" : "#5b9bd5"
@@ -56,7 +56,7 @@ module LazyRails
 
         if entry.raw && !entry.raw.empty?
           lines << "Full Log:"
-          lines << "\u2500" * 9
+          lines << ("\u2500" * 9)
           lines << entry.raw
         end
 

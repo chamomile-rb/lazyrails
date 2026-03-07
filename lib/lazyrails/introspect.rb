@@ -2,7 +2,8 @@
 
 module LazyRails
   class Introspect
-    IntrospectData = Data.define(:routes, :tables, :migrations, :models, :connection, :about, :stats, :notes, :rake_tasks, :error)
+    IntrospectData = Data.define(:routes, :tables, :migrations, :models, :connection, :about, :stats, :notes,
+                                 :rake_tasks, :error)
 
     RUNNER_SCRIPT = File.expand_path("introspect_runner.rb", __dir__)
 
@@ -15,7 +16,7 @@ module LazyRails
           path: r[:path].to_s,
           action: r[:action].to_s,
           name: r[:name].to_s,
-          engine: !!r[:engine]
+          engine: !r[:engine].nil?
         )
       end
 
@@ -87,7 +88,7 @@ module LazyRails
       about = (data[:about] || {}).transform_keys(&:to_s)
 
       # Parse stats from raw output using existing parser
-      stats_raw = data[:stats_raw]&.to_s || ""
+      stats_raw = data[:stats_raw].to_s
       stats = stats_raw.empty? ? { rows: [], summary: {} } : Parsers::RailsStats.parse(stats_raw)
 
       # Parse notes (already structured from the runner)

@@ -29,7 +29,11 @@ module LazyRails
           ["c", "Create migration"],
           ["d", "Migrate down version"],
           ["u", "Migrate up version"],
-          ["t", "Browse table data"]
+          ["t", "Browse table data"],
+          ["s", "Seed database"],
+          ["C", "Create database"],
+          ["D", "Drop database"],
+          ["r", "Reset database"]
         ] },
         { section: "Tests", bindings: [
           ["Enter", "Run selected test"],
@@ -62,7 +66,7 @@ module LazyRails
       def self.render(width:, height:)
         lines = []
         lines << "LazyRails Help"
-        lines << "=" * [width - 4, 40].min
+        lines << ("=" * [width - 4, 40].min)
         lines << ""
 
         GLOBAL_BINDINGS.each do |section|

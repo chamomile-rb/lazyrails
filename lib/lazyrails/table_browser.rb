@@ -83,7 +83,7 @@ module LazyRails
       params["where"] = @where_clause if @where_clause && !@where_clause.strip.empty?
       params["order"] = order_expression if @order_column && !@order_column.strip.empty?
       params["limit"] = PAGE_SIZE
-      params["offset"] = @page * PAGE_SIZE if @page > 0
+      params["offset"] = @page * PAGE_SIZE if @page.positive?
       params
     end
 
@@ -101,7 +101,7 @@ module LazyRails
         col = parts[0]
         dir = parts[1]&.upcase
 
-        if dir == "DESC" || dir == "ASC"
+        if %w[DESC ASC].include?(dir)
           @order_column = col
           @order_dir = dir
         elsif @order_column == col
@@ -137,6 +137,7 @@ module LazyRails
 
     def total_pages
       return 1 if @total_rows <= 0
+
       (@total_rows.to_f / PAGE_SIZE).ceil
     end
 
@@ -181,7 +182,7 @@ module LazyRails
           { action: :load_table, table: @selected_table }
         end
       when "p"
-        if @page > 0
+        if @page.positive?
           @page -= 1
           { action: :load_table, table: @selected_table }
         end
@@ -213,11 +214,11 @@ module LazyRails
         visible = @tables[@scroll_offset, visible_height] || []
         visible.each_with_index do |name, i|
           absolute_index = i + @scroll_offset
-          if absolute_index == @cursor
-            lines << Flourish::Style.new.reverse.render("  #{name.ljust([width - 6, 0].max)}  ")
-          else
-            lines << "  #{name}"
-          end
+          lines << if absolute_index == @cursor
+                     Flourish::Style.new.reverse.render("  #{name.ljust([width - 6, 0].max)}  ")
+                   else
+                     "  #{name}"
+                   end
         end
       end
 
@@ -226,7 +227,7 @@ module LazyRails
       lines.join("\n")
     end
 
-    def render_row_data(width, height)
+    def render_row_data(_width, height)
       header = Flourish::Style.new.bold.render("Table: #{@selected_table}")
       lines = [header, ""]
 
@@ -258,14 +259,14 @@ module LazyRails
     def adjust_scroll_offset(visible_height)
       @scroll_offset = @cursor if @cursor < @scroll_offset
       @scroll_offset = @cursor - visible_height + 1 if @cursor >= @scroll_offset + visible_height
-      @scroll_offset = [[@scroll_offset, @tables.size - visible_height].min, 0].max
+      @scroll_offset = @scroll_offset.clamp(0, [@tables.size - visible_height, 0].max)
     end
 
     def column_width(col_name, total_columns)
       base = [col_name.length + 2, 12].max
       if total_columns > 6
         # Shrink columns to fit more on screen
-        [base, [80 / total_columns, 8].max].min
+        [base, (80 / total_columns).clamp(8..)].min
       else
         [base, 30].min
       end

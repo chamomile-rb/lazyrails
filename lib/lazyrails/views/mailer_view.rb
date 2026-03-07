@@ -17,7 +17,7 @@ module LazyRails
       def self.render_detail(preview, width:)
         lines = []
         lines << preview.display_name
-        lines << "=" * [width - 4, 40].min
+        lines << ("=" * [width - 4, 40].min)
         lines << ""
         lines << "Press Enter to render this preview."
         lines << "Press o to open in browser (server must be running)."
@@ -27,7 +27,7 @@ module LazyRails
       def self.render_detail_content(preview, content, width:)
         lines = []
         lines << preview.display_name
-        lines << "=" * [width - 4, 40].min
+        lines << ("=" * [width - 4, 40].min)
         lines << ""
 
         if content[:error]
@@ -36,8 +36,8 @@ module LazyRails
         end
 
         lines << "Subject:  #{content[:subject]}"
-        lines << "To:       #{Array(content[:to]).join(", ")}"
-        lines << "From:     #{Array(content[:from]).join(", ")}"
+        lines << "To:       #{Array(content[:to]).join(', ')}"
+        lines << "From:     #{Array(content[:from]).join(', ')}"
         lines << ""
         lines << "\u2500\u2500\u2500\u2500 Body Preview \u2500\u2500\u2500\u2500"
         lines << ""

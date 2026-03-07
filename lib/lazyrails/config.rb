@@ -25,7 +25,7 @@ module LazyRails
         )
       end
       new(commands)
-    rescue
+    rescue StandardError
       new([])
     end
 

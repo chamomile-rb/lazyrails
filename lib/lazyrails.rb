@@ -33,6 +33,8 @@ require_relative "lazyrails/command_log_overlay"
 require_relative "lazyrails/menu_overlay"
 require_relative "lazyrails/table_browser"
 require_relative "lazyrails/input_mode"
+require_relative "lazyrails/welcome_overlay"
+require_relative "lazyrails/user_settings"
 
 # Parsers
 require_relative "lazyrails/parsers/schema"

@@ -19,11 +19,7 @@ module LazyRails
       end
 
       def self.render_detail(test_file, width:)
-        if test_file.last_output
-          test_file.last_output
-        else
-          "Press Enter to run this test.\n\nFile: #{test_file.path}"
-        end
+        test_file.last_output || "Press Enter to run this test.\n\nFile: #{test_file.path}"
       end
     end
   end

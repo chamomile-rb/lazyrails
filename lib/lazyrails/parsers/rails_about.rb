@@ -11,11 +11,11 @@ module LazyRails
           line = line.strip
           next if line.empty? || line.start_with?("About your")
 
-          if (match = line.match(/^(.+?)\s{2,}(.+)$/))
-            key = match[1].strip
-            value = match[2].strip
-            info[key] = value
-          end
+          next unless (match = line.match(/^(.+?)\s{2,}(.+)$/))
+
+          key = match[1].strip
+          value = match[2].strip
+          info[key] = value
         end
         info
       end

@@ -25,26 +25,24 @@ module LazyRails
 
         lines = []
         lines << "#{model.name} (#{model.table_name}) \u2014 #{model.columns.size} columns"
-        lines << "\u2550" * [width - 4, 40].min
+        lines << ("\u2550" * [width - 4, 40].min)
         lines << ""
 
         if model.associations.any?
           lines << "Relationships"
-          lines << "\u2500" * 13
+          lines << ("\u2500" * 13)
           lines << model.name
 
           assocs = model.associations
           assocs.each_with_index do |a, i|
             last = i == assocs.size - 1
             connector = last ? "\u2514" : "\u251c"
-            pipe = last ? "    " : "\u2502   "
-
             macro_label = a.macro.to_s.tr("_", " ")
             color_key = if a.macro == :has_many && a.class_name.include?("through")
-              :has_many_through
-            else
-              a.macro
-            end
+                          :has_many_through
+                        else
+                          a.macro
+                        end
             color = ARROW_COLORS[color_key] || "#999999"
 
             arrow_text = "#{macro_label} \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2192 #{a.class_name}"
@@ -56,7 +54,7 @@ module LazyRails
 
         if model.columns.any?
           lines << "Columns"
-          lines << "\u2500" * 7
+          lines << ("\u2500" * 7)
           model.columns.each do |col|
             null_flag = col.null ? "" : "  NOT NULL"
             default_flag = col.default.nil? ? "" : "  default: #{col.default.inspect}"
@@ -67,7 +65,7 @@ module LazyRails
 
         if model.validations.any?
           lines << "Validations"
-          lines << "\u2500" * 11
+          lines << ("\u2500" * 11)
           model.validations.each do |v|
             attrs = v.attributes.map { |a| ":#{a}" }.join(", ")
             opts = v.options.empty? ? "" : v.options.map { |k, val| "#{k}: #{val.inspect}" }.join(", ")

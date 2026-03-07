@@ -32,10 +32,10 @@ begin
   sql += " WHERE #{where_clause}" if where_clause && !where_clause.strip.empty?
   sql += " ORDER BY #{order_clause}" if order_clause && !order_clause.strip.empty?
   sql += " LIMIT #{limit}"
-  sql += " OFFSET #{offset}" if offset > 0
+  sql += " OFFSET #{offset}" if offset.positive?
 
   result = conn.exec_query(sql)
   puts JSON.generate({ columns: result.columns, rows: result.rows, total: total })
-rescue => e
+rescue StandardError => e
   puts JSON.generate({ columns: [], rows: [], total: 0, error: e.message })
 end

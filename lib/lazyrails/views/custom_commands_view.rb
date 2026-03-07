@@ -17,10 +17,10 @@ module LazyRails
       def self.render_detail(command, width:)
         lines = []
         lines << command.name
-        lines << "=" * [width - 4, 40].min
+        lines << ("=" * [width - 4, 40].min)
         lines << ""
         lines << "Command:      #{command.command}"
-        lines << "Key binding:  #{command.key.to_s.empty? ? "(none)" : command.key}"
+        lines << "Key binding:  #{command.key.to_s.empty? ? '(none)' : command.key}"
         lines << "Confirmation: #{command.confirmation_tier}"
         lines << ""
         lines << "Press Enter to run this command."

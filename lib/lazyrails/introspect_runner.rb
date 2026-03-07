@@ -11,9 +11,10 @@ begin
   data[:routes] = Rails.application.routes.routes.filter_map do |route|
     w = ActionDispatch::Routing::RouteWrapper.new(route)
     next if w.internal?
+
     { verb: w.verb, path: w.path, action: w.endpoint, name: w.name, engine: w.engine? }
   end
-rescue => e
+rescue StandardError => e
   data[:routes_error] = e.message
   data[:routes] = []
 end
@@ -38,7 +39,7 @@ rescue ActiveRecord::NoDatabaseError => e
   data[:tables] = {}
   data[:connection] = {}
   data[:migrations_error] = "no_database"
-rescue => e
+rescue StandardError => e
   data[:tables] = {}
   data[:connection] = {}
   data[:tables_error] = e.message
@@ -47,21 +48,21 @@ end
 begin
   # Rails 7.2+ changed the SchemaMigration API
   applied = if ActiveRecord::SchemaMigration.respond_to?(:all_versions)
-    ActiveRecord::SchemaMigration.all_versions
-  elsif ActiveRecord::Base.connection.respond_to?(:schema_migration)
-    ActiveRecord::Base.connection.schema_migration.versions
-  else
-    ActiveRecord::SchemaMigration.new(ActiveRecord::Base.connection_pool).versions
-  end
+              ActiveRecord::SchemaMigration.all_versions
+            elsif ActiveRecord::Base.connection.respond_to?(:schema_migration)
+              ActiveRecord::Base.connection.schema_migration.versions
+            else
+              ActiveRecord::SchemaMigration.new(ActiveRecord::Base.connection_pool).versions
+            end
 
   # Rails 7.2+ migration context API
   migration_paths = if ActiveRecord::Migrator.respond_to?(:migrations_paths)
-    ActiveRecord::Migrator.migrations_paths
-  elsif ActiveRecord::Base.connection.respond_to?(:migration_context)
-    ActiveRecord::Base.connection.migration_context.migrations_paths
-  else
-    ["db/migrate"]
-  end
+                      ActiveRecord::Migrator.migrations_paths
+                    elsif ActiveRecord::Base.connection.respond_to?(:migration_context)
+                      ActiveRecord::Base.connection.migration_context.migrations_paths
+                    else
+                      ["db/migrate"]
+                    end
 
   context = ActiveRecord::MigrationContext.new(migration_paths)
   data[:migrations] = context.migrations.map do |m|
@@ -72,7 +73,7 @@ begin
       filename: m.filename
     }
   end
-rescue => e
+rescue StandardError => e
   data[:migrations_error] = e.message
   data[:migrations] = []
 end
@@ -84,7 +85,7 @@ begin
 
     begin
       next unless model.table_exists?
-    rescue
+    rescue StandardError
       next
     end
 
@@ -97,10 +98,10 @@ begin
     end
 
     { name: model.name, table: model.table_name, associations: assocs, validations: valids }
-  rescue => e
+  rescue StandardError => e
     { name: model.name, error: e.message }
   end
-rescue => e
+rescue StandardError => e
   data[:models_error] = e.message
   data[:models] = []
 end
@@ -113,10 +114,18 @@ begin
   about["Ruby version"] = "#{RUBY_VERSION} (#{RUBY_PLATFORM})"
   about["Rails version"] = Rails::VERSION::STRING
   about["Environment"] = Rails.env
-  about["Database adapter"] = ActiveRecord::Base.connection_db_config.adapter rescue nil
-  about["Database"] = ActiveRecord::Base.connection_db_config.database rescue nil
+  about["Database adapter"] = begin
+    ActiveRecord::Base.connection_db_config.adapter
+  rescue StandardError
+    nil
+  end
+  about["Database"] = begin
+    ActiveRecord::Base.connection_db_config.database
+  rescue StandardError
+    nil
+  end
   data[:about] = about
-rescue => e
+rescue StandardError => e
   data[:about_error] = e.message
   data[:about] = {}
 end
@@ -154,9 +163,7 @@ begin
     stats_directories << [name, full.to_s, true] if full.directory?
   end
 
-  if Rails.root.join("spec").directory?
-    stats_directories << ["RSpec specs", Rails.root.join("spec").to_s, true]
-  end
+  stats_directories << ["RSpec specs", Rails.root.join("spec").to_s, true] if Rails.root.join("spec").directory?
 
   if stats_directories.any?
     cs = CodeStatistics.new(*stats_directories)
@@ -171,7 +178,7 @@ begin
   else
     data[:stats_raw] = ""
   end
-rescue => e
+rescue StandardError => e
   data[:stats_error] = e.message
   data[:stats_raw] = ""
 end
@@ -185,7 +192,7 @@ begin
     end
   end
   data[:notes] = notes
-rescue => e
+rescue StandardError => e
   data[:notes_error] = e.message
   data[:notes] = []
 end
@@ -199,7 +206,7 @@ begin
       source: t.locations&.first
     }
   end
-rescue => e
+rescue StandardError => e
   data[:rake_tasks] = []
   data[:rake_tasks_error] = e.message
 end

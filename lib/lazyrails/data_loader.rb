@@ -16,7 +16,7 @@ module LazyRails
         else
           IntrospectLoadedMsg.new(data: nil, error: result.stderr)
         end
-      rescue => e
+      rescue StandardError => e
         IntrospectLoadedMsg.new(data: nil, error: e.message)
       end)
     end
@@ -27,7 +27,7 @@ module LazyRails
         lockfile = File.join(project_dir, "Gemfile.lock")
         gems = Parsers::GemfileLock.parse(lockfile)
         GemsLoadedMsg.new(gems: gems, error: nil)
-      rescue => e
+      rescue StandardError => e
         GemsLoadedMsg.new(gems: [], error: e.message)
       end)
     end
@@ -40,19 +40,19 @@ module LazyRails
         spec_dir = File.join(project_dir, "spec")
 
         if File.directory?(spec_dir)
-          Dir.glob("#{spec_dir}/**/*_spec.rb").sort.each do |f|
+          Dir.glob("#{spec_dir}/**/*_spec.rb").each do |f|
             files << TestFile.new(path: f.sub("#{project_dir}/", ""))
           end
         end
 
         if File.directory?(test_dir)
-          Dir.glob("#{test_dir}/**/*_test.rb").sort.each do |f|
+          Dir.glob("#{test_dir}/**/*_test.rb").each do |f|
             files << TestFile.new(path: f.sub("#{project_dir}/", ""))
           end
         end
 
         TestsLoadedMsg.new(files: files, error: nil)
-      rescue => e
+      rescue StandardError => e
         TestsLoadedMsg.new(files: [], error: e.message)
       end)
     end
@@ -61,7 +61,7 @@ module LazyRails
       display = command.is_a?(Array) ? command.join(" ") : command
       set_flash("Running: #{display}...")
       project_dir = @project.dir
-      cmd(-> {
+      cmd(lambda {
         result = CommandRunner.run(command, dir: project_dir)
         CommandFinishedMsg.new(entry: result, panel: panel_type)
       })
@@ -73,7 +73,7 @@ module LazyRails
       path = test_file.path
       test_cmd = path.start_with?("spec/") ? ["bundle", "exec", "rspec", path] : ["bin/rails", "test", path]
 
-      cmd(-> {
+      cmd(lambda {
         result = CommandRunner.run(test_cmd, dir: project_dir)
         status = result.success? ? :passed : :failed
         TestFinishedMsg.new(path: path, status: status, output: result.stdout + result.stderr)
@@ -99,7 +99,7 @@ module LazyRails
         else
           TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], total: 0, error: result.stderr)
         end
-      rescue => e
+      rescue StandardError => e
         TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], total: 0, error: e.message)
       end)
     end
@@ -119,7 +119,7 @@ module LazyRails
           duration_ms: result.duration_ms
         )
         EvalFinishedMsg.new(entry: entry)
-      rescue => e
+      rescue StandardError => e
         entry = EvalEntry.new(expression: expression, result: nil, error: e.message, duration_ms: 0)
         EvalFinishedMsg.new(entry: entry)
       end)
@@ -137,7 +137,7 @@ module LazyRails
           content: result.success? ? result.stdout : nil,
           error: result.success? ? nil : result.stderr
         )
-      rescue => e
+      rescue StandardError => e
         CredentialsLoadedMsg.new(environment: credential_file.environment, content: nil, error: e.message)
       end)
     end
@@ -168,7 +168,7 @@ module LazyRails
         end
 
         MailersLoadedMsg.new(previews: previews, error: nil)
-      rescue => e
+      rescue StandardError => e
         MailersLoadedMsg.new(previews: [], error: e.message)
       end)
     end
@@ -179,7 +179,8 @@ module LazyRails
       mailer_class = preview.mailer_class
       method_name = preview.method_name
       cmd(lambda do
-        script = "require '#{preview_path}'; " \
+        escaped_path = preview_path.gsub("\\", "\\\\\\\\").gsub("'", "\\\\'")
+        script = "require '#{escaped_path}'; " \
                  "mail = #{mailer_class}Preview.new.public_send(:#{method_name}); " \
                  "puts JSON.generate({ subject: mail.subject, to: mail.to, from: mail.from, " \
                  "body: mail.body.decoded.gsub(/<[^>]+>/, '').squeeze(' ').strip })"
@@ -189,11 +190,11 @@ module LazyRails
           MailerPreviewLoadedMsg.new(preview: preview, error: nil, **data)
         else
           MailerPreviewLoadedMsg.new(preview: preview, subject: nil, to: nil,
-                                    from: nil, body: nil, error: result.stderr)
+                                     from: nil, body: nil, error: result.stderr)
         end
-      rescue => e
+      rescue StandardError => e
         MailerPreviewLoadedMsg.new(preview: preview, subject: nil, to: nil,
-                                  from: nil, body: nil, error: e.message)
+                                   from: nil, body: nil, error: e.message)
       end)
     end
 
@@ -218,7 +219,7 @@ module LazyRails
         else
           JobsLoadedMsg.new(available: true, jobs: [], counts: {}, error: result.stderr)
         end
-      rescue => e
+      rescue StandardError => e
         JobsLoadedMsg.new(available: true, jobs: [], counts: {}, error: e.message)
       end)
     end
@@ -248,7 +249,7 @@ module LazyRails
         else
           JobActionMsg.new(action: "retry_all", job_id: nil, success: false, error: result.stderr)
         end
-      rescue => e
+      rescue StandardError => e
         JobActionMsg.new(action: "retry_all", job_id: nil, success: false, error: e.message)
       end)
     end
@@ -272,7 +273,7 @@ module LazyRails
         else
           JobActionMsg.new(action: action, job_id: id, success: false, error: result.stderr)
         end
-      rescue => e
+      rescue StandardError => e
         JobActionMsg.new(action: action, job_id: id, success: false, error: e.message)
       end)
     end
@@ -299,7 +300,7 @@ module LazyRails
         if result.success? && (match = result.stdout.match(/Homepage:\s*(\S+)/))
           Platform.open_url(match[1])
         end
-      rescue
+      rescue StandardError
         # Best-effort — ignore failures
       end)
     end

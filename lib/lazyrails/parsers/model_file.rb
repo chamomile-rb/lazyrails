@@ -42,6 +42,7 @@ module LazyRails
         rest.scan(/:(\w+)/) do |match|
           word = match[0]
           break if validation_kind?(word)
+
           attrs << word.to_sym
         end
         return if attrs.empty?

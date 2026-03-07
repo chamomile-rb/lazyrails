@@ -9,21 +9,18 @@ module LazyRails
     end
 
     def self.extract_annotation(cmd, stdout, stderr, exit_code)
-      if cmd.include?("db:migrate") && !cmd.include?("db:migrate:") && exit_code == 0
+      if cmd.include?("db:migrate") && !cmd.include?("db:migrate:") && exit_code.zero?
         applied = stdout.scan(/==\s+(\w+):\s+migrating/).flatten
-        applied.empty? ? "No pending migrations" : "Applied: #{applied.join(", ")}"
-      elsif cmd.include?("db:rollback") && exit_code == 0
+        applied.empty? ? "No pending migrations" : "Applied: #{applied.join(', ')}"
+      elsif cmd.include?("db:rollback") && exit_code.zero?
         rolled = stdout.scan(/==\s+(\w+):\s+reverting/).flatten
-        rolled.empty? ? "Rolled back" : "Reverted: #{rolled.join(", ")}"
-      elsif cmd.match?(/generate model\s/)
+        rolled.empty? ? "Rolled back" : "Reverted: #{rolled.join(', ')}"
+      elsif cmd.include?("generate ")
         files = stdout.scan(/create\s+(\S+)/).flatten
-        files.empty? ? nil : "Created: #{files.join(", ")}"
-      elsif cmd.match?(/generate migration\s/)
-        files = stdout.scan(/create\s+(\S+)/).flatten
-        files.empty? ? nil : "Created: #{files.join(", ")}"
-      elsif cmd.match?(/destroy model\s/)
+        files.empty? ? nil : "Created: #{files.join(', ')}"
+      elsif cmd.include?("destroy ")
         files = stdout.scan(/remove\s+(\S+)/).flatten
-        files.empty? ? nil : "Removed: #{files.join(", ")}"
+        files.empty? ? nil : "Removed: #{files.join(', ')}"
       elsif exit_code != 0
         first_error = stderr.to_s.lines.first&.strip
         first_error && !first_error.empty? ? "Failed: #{first_error}" : nil
@@ -36,7 +33,7 @@ module LazyRails
 
       if cmd.include?("db:migrate") && !cmd.include?("db:migrate:")
         count = stdout.scan(/==\s+\w+:\s+migrating/).length
-        count > 0 ? ["bin/rails", "db:rollback", "STEP=#{count}"] : nil
+        count.positive? ? ["bin/rails", "db:rollback", "STEP=#{count}"] : nil
       elsif cmd.match?(/generate model (\w+)/)
         model = cmd.match(/generate model (\w+)/)[1]
         ["bin/rails", "destroy", "model", model]

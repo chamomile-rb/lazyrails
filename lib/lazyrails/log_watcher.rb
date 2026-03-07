@@ -57,7 +57,7 @@ module LazyRails
       while @running
         begin
           check_for_new_content
-        rescue
+        rescue StandardError
           # Silently ignore read errors
         end
         sleep POLL_INTERVAL
@@ -70,9 +70,7 @@ module LazyRails
       current_size = File.size(@log_path)
 
       # File was truncated/rotated
-      if current_size < @position
-        @position = 0
-      end
+      @position = 0 if current_size < @position
 
       return if current_size == @position
 
@@ -88,13 +86,13 @@ module LazyRails
       new_content = CommandRunner.force_utf8(new_content)
       parsed = Parsers::LogParser.parse(new_content)
 
-      unless parsed.empty?
-        @mutex.synchronize do
-          @entries.concat(parsed)
-          # Keep only the latest entries to avoid unbounded growth
-          @entries = @entries.last(500) if @entries.size > 500
-          @dirty = true
-        end
+      return if parsed.empty?
+
+      @mutex.synchronize do
+        @entries.concat(parsed)
+        # Keep only the latest entries to avoid unbounded growth
+        @entries = @entries.last(500) if @entries.size > 500
+        @dirty = true
       end
     end
   end

@@ -266,7 +266,7 @@ RSpec.describe "Jobs structs and views" do
       it "handles hash/array arguments (not just strings)" do
         job = LazyRails::JobEntry.new(
           id: 1, class_name: "Foo", queue_name: "q", status: "ready",
-          arguments: {"job_class" => "Foo", "arguments" => [1, 2]}
+          arguments: { "job_class" => "Foo", "arguments" => [1, 2] }
         )
         output = described_class.render_detail(job, width: 60)
         expect(output).to include("Arguments")

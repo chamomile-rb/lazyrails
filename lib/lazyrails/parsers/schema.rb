@@ -36,7 +36,7 @@ module LazyRails
             null = stripped.include?("null: false") || !stripped.include?("null:")
             columns << Column.new(name: "created_at", type: :datetime, null: !null, default: nil, limit: nil)
             columns << Column.new(name: "updated_at", type: :datetime, null: !null, default: nil, limit: nil)
-          elsif current_table && stripped.match?(/\Aend\z/)
+          elsif current_table && stripped == "end"
             tables[current_table] = columns
             current_table = nil
             columns = []
@@ -54,7 +54,7 @@ module LazyRails
         case value
         when /\A["'](.*)["']\z/ then Regexp.last_match(1)
         when /\A\d+\z/          then value.to_i
-        when /\A\d+\.\d+\z/    then value.to_f
+        when /\A\d+\.\d+\z/ then value.to_f
         when "true"             then true
         when "false"            then false
         when "nil"              then nil

@@ -11,7 +11,7 @@ module LazyRails
         command_log.entries.each_with_index.map do |entry, i|
           icon = entry.success? ? "\u2713" : "\u2717"
           color = entry.success? ? "#04b575" : "#ff6347"
-          duration = "%.1fs" % (entry.duration_ms / 1000.0)
+          duration = format("%.1fs", entry.duration_ms / 1000.0)
           cmd_text = ViewHelpers.truncate(entry.command, width - 12)
           text = "#{icon} #{cmd_text.ljust(width - 12)} #{duration}"
 
@@ -29,7 +29,7 @@ module LazyRails
           end
 
           if entry.undo_command
-            undo_line = "  \u21b3 Undo: #{entry.undo_command.join(" ")}"
+            undo_line = "  \u21b3 Undo: #{entry.undo_command.join(' ')}"
             lines << Flourish::Style.new.foreground(DIM).render(undo_line)
           end
 
@@ -41,8 +41,8 @@ module LazyRails
         lines = []
         lines << "Command: #{entry.command}"
         lines << "Exit:    #{entry.exit_code}"
-        lines << "Time:    #{entry.timestamp.strftime("%H:%M:%S")}"
-        lines << "Duration: %.1fs" % (entry.duration_ms / 1000.0)
+        lines << "Time:    #{entry.timestamp.strftime('%H:%M:%S')}"
+        lines << format("Duration: %.1fs", entry.duration_ms / 1000.0)
 
         if entry.annotation
           lines << ""
@@ -53,26 +53,25 @@ module LazyRails
         if entry.undo_command
           lines << ""
           lines << "Undo command:"
-          lines << "  #{entry.undo_command.join(" ")}"
+          lines << "  #{entry.undo_command.join(' ')}"
         end
 
         if entry.stdout && !entry.stdout.empty?
           lines << ""
           lines << "Output:"
-          lines << "-" * [width - 4, 40].min
+          lines << ("-" * [width - 4, 40].min)
           lines << entry.stdout
         end
 
         if entry.stderr && !entry.stderr.empty?
           lines << ""
           lines << "Errors:"
-          lines << "-" * [width - 4, 40].min
+          lines << ("-" * [width - 4, 40].min)
           lines << entry.stderr
         end
 
         lines.join("\n")
       end
-
     end
   end
 end

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ruby-version: ["3.2", "3.3", "3.4"]
+    steps:
+      - uses: actions/checkout@v4
+
+      # Check out dependencies (not yet published to RubyGems)
+      - uses: actions/checkout@v4
+        with:
+          repository: xjackk/chamomile
+          path: chamomile
+      - uses: actions/checkout@v4
+        with:
+          repository: xjackk/Petals
+          path: petals
+      - uses: actions/checkout@v4
+        with:
+          repository: xjackk/flourish
+          path: flourish
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+      - run: bundle exec rspec
+      - run: bundle exec rubocop
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: xjackk/chamomile
+          path: chamomile
+      - uses: actions/checkout@v4
+        with:
+          repository: xjackk/Petals
+          path: petals
+      - uses: actions/checkout@v4
+        with:
+          repository: xjackk/flourish
+          path: flourish
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - run: bundle exec rubocop

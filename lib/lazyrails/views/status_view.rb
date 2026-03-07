@@ -5,11 +5,11 @@ module LazyRails
     module StatusView
       def self.render(panel, project, about_data, width:, focused:)
         lines = []
-        lines << "Rails #{project.rails_version || "?"}"
-        lines << "Ruby #{project.ruby_version || "?"}"
+        lines << "Rails #{project.rails_version || '?'}"
+        lines << "Ruby #{project.ruby_version || '?'}"
 
         env = about_data.is_a?(Hash) && (about_data["Environment"] || about_data[:environment])
-        lines << "Env: #{env || "development"}"
+        lines << "Env: #{env || 'development'}"
 
         lines << "App: #{project.app_name}" if project.app_name
         lines << "Branch: #{project.git_branch}" if project.git_branch
@@ -30,17 +30,17 @@ module LazyRails
 
         if about_data.is_a?(Hash) && !about_data.empty?
           sections << "About"
-          sections << "=" * [width - 4, 40].min
+          sections << ("=" * [width - 4, 40].min)
           about_data.each { |k, v| sections << "  #{k}: #{v}" }
           sections << ""
         end
 
         if stats_data.is_a?(Hash) && stats_data[:rows]&.any?
           sections << "Statistics"
-          sections << "=" * [width - 4, 40].min
-          header = "#{"Name".ljust(25)} #{"Lines".rjust(6)}  #{"LOC".rjust(6)}  #{"Cls".rjust(4)}  #{"Mth".rjust(4)}"
+          sections << ("=" * [width - 4, 40].min)
+          header = "#{'Name'.ljust(25)} #{'Lines'.rjust(6)}  #{'LOC'.rjust(6)}  #{'Cls'.rjust(4)}  #{'Mth'.rjust(4)}"
           sections << header
-          sections << "-" * header.length
+          sections << ("-" * header.length)
           stats_data[:rows].each { |row| sections << row.to_s }
 
           if (s = stats_data[:summary]) && s[:code_loc]
@@ -52,7 +52,7 @@ module LazyRails
 
         if notes_data.is_a?(Array) && notes_data.any?
           sections << "Notes"
-          sections << "=" * [width - 4, 40].min
+          sections << ("=" * [width - 4, 40].min)
           current_file = nil
           notes_data.each do |note|
             if note.file != current_file

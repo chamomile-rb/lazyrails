@@ -4,8 +4,7 @@ module LazyRails
   class Panel
     TYPES = %i[status server routes database models tests gems rake console credentials logs mailers jobs custom].freeze
 
-    attr_reader :type, :title, :items, :cursor, :scroll_offset, :loading, :error
-    attr_reader :filter_text
+    attr_reader :type, :title, :items, :cursor, :scroll_offset, :loading, :error, :filter_text
 
     def filter_text=(value)
       @filter_text = value
@@ -61,11 +60,11 @@ module LazyRails
 
       @filtered_cache_key = cache_key
       @filtered_cache = if filter_text.empty?
-        items
-      else
-        downcased = filter_text.downcase
-        items.select { |item| item.to_s.downcase.include?(downcased) }
-      end
+                          items
+                        else
+                          downcased = filter_text.downcase
+                          items.select { |item| item.to_s.downcase.include?(downcased) }
+                        end
     end
 
     def move_cursor(delta, visible_height)

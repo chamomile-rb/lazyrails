@@ -26,7 +26,7 @@ module LazyRails
       def self.render_detail(route, project_dir, width:, file_cache: nil)
         lines = []
         lines << "#{route.verb} #{route.path}"
-        lines << "=" * [width - 4, 40].min
+        lines << ("=" * [width - 4, 40].min)
         lines << ""
         lines << "Action:     #{route.action}"
         lines << "Name:       #{route.name}" if route.name && !route.name.empty?
@@ -34,7 +34,7 @@ module LazyRails
 
         if route.action.include?("#")
           controller, action_name = route.action.split("#", 2)
-          controller_file = "app/controllers/#{controller.gsub("::", "/")}_controller.rb"
+          controller_file = "app/controllers/#{controller.gsub('::', '/')}_controller.rb"
           full_path = File.join(project_dir, controller_file)
 
           lines << ""
@@ -42,11 +42,11 @@ module LazyRails
           content = file_cache ? file_cache.read(full_path) : safe_read(full_path)
           if content
             lines << "Status:     File exists"
-            if content.include?("def #{action_name}")
-              lines << "Method:     def #{action_name} \u2713"
-            else
-              lines << "Method:     def #{action_name} \u2717 (not found in file)"
-            end
+            lines << if content.include?("def #{action_name}")
+                       "Method:     def #{action_name} \u2713"
+                     else
+                       "Method:     def #{action_name} \u2717 (not found in file)"
+                     end
           else
             lines << "Status:     File not found"
           end
@@ -66,7 +66,6 @@ module LazyRails
         File.exist?(path) ? File.read(path) : nil
       end
       private_class_method :safe_read
-
     end
   end
 end

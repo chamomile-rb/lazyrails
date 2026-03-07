@@ -34,7 +34,7 @@ module LazyRails
           if (match = stripped.match(/\Agroup\s+(.+?)\s+do/))
             new_groups = match[1].scan(/:(\w+)/).flatten.map(&:to_sym)
             group_stack.push(new_groups) unless new_groups.empty?
-          elsif stripped.match?(/\Aend\z/) && group_stack.size > 1
+          elsif stripped == "end" && group_stack.size > 1
             group_stack.pop
           elsif (match = stripped.match(/\Agem\s+['"]([^'"]+)['"](.*)/))
             gem_name = match[1]
@@ -42,12 +42,12 @@ module LazyRails
 
             # Check for inline group: option
             gem_groups = if (inline = rest.match(/group:\s*\[?([^\]]+)\]?/))
-              inline[1].scan(/:(\w+)/).flatten.map(&:to_sym)
-            elsif (inline = rest.match(/group:\s*:(\w+)/))
-              [inline[1].to_sym]
-            else
-              group_stack.last.dup
-            end
+                           inline[1].scan(/:(\w+)/).flatten.map(&:to_sym)
+                         elsif (inline = rest.match(/group:\s*:(\w+)/))
+                           [inline[1].to_sym]
+                         else
+                           group_stack.last.dup
+                         end
 
             groups[gem_name] = gem_groups
           end

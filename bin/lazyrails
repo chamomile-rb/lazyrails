@@ -3,6 +3,30 @@
 
 require "lazyrails"
 
+case ARGV[0]
+when "--version", "-v"
+  puts "lazyrails #{LazyRails::VERSION}"
+  exit 0
+when "--help", "-h"
+  puts <<~HELP
+    Usage: lazyrails [directory]
+
+    A lazygit-style terminal UI for the Rails command line.
+
+    Options:
+      -v, --version    Show version
+      -h, --help       Show this help
+
+    Run without arguments inside a Rails project, or pass a path:
+      lazyrails /path/to/rails/app
+  HELP
+  exit 0
+when /\A-/
+  warn "Unknown option: #{ARGV[0]}"
+  warn "Run 'lazyrails --help' for usage."
+  exit 1
+end
+
 dir = ARGV[0] || Dir.pwd
 
 project = LazyRails::Project.detect(dir)
