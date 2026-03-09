@@ -61,6 +61,23 @@ RSpec.describe LazyRails::WelcomeOverlay do
       expect(result).to include("Tab")
       expect(result).to include("Enter")
     end
+
+    it "renders without error at very small dimensions" do
+      result = overlay.render(width: 30, height: 10)
+      expect(result).to be_a(String)
+    end
+
+    it "does not exceed screen width at small sizes" do
+      result = overlay.render(width: 25, height: 12)
+      result.split("\n").each do |line|
+        visible = Flourish::ANSI.strip(line)
+        expect(visible.length).to be <= 25
+      end
+    end
+
+    it "renders at minimum viable dimensions" do
+      expect { overlay.render(width: 10, height: 5) }.not_to raise_error
+    end
   end
 end
 

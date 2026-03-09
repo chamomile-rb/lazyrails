@@ -75,8 +75,9 @@ module LazyRails
 
     def render(width:, height:)
       box_width = [width - 8, 60].min
-      box_width = [box_width, 40].max
-      visible_height = height - 8
+      box_width = [box_width, 20].max
+      box_width = [box_width, width - 2].min
+      visible_height = [height - 8, 3].max
 
       visible = @lines[@scroll, visible_height] || []
       content = visible.map { |l| ViewHelpers.truncate(l, box_width - 4) }.join("\n")
