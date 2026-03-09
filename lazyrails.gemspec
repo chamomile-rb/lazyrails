@@ -3,9 +3,9 @@
 require_relative "lib/lazyrails/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "lazyrails"
+  spec.name = "lazyrails-tui"
   spec.version = LazyRails::VERSION
-  spec.authors = ["emo"]
+  spec.authors = ["Jack Killilea"]
   spec.summary = "A lazygit-style terminal UI for the Rails command line"
   spec.description = "LazyRails gives Rails developers a fast, navigable TUI " \
                      "that surfaces everything the Rails CLI offers in a single split-pane interface."
@@ -23,6 +23,6 @@ Gem::Specification.new do |spec|
   spec.executables = ["lazyrails"]
 
   spec.add_dependency "chamomile", "~> 0.1"
-  spec.add_dependency "flourish", "~> 0.1"
-  spec.add_dependency "petals", "~> 0.1"
+  spec.add_dependency "chamomile-flourish", "~> 0.1"
+  spec.add_dependency "chamomile-petals", "~> 0.1"
 end
