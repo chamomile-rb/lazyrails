@@ -2,7 +2,11 @@
 
 module LazyRails
   # Custom messages for async operations
-  TestFinishedMsg = Data.define(:path, :status, :output)
+  TestFinishedMsg = Data.define(:path, :status, :output, :command_entry) do
+    def initialize(command_entry: nil, **kwargs)
+      super
+    end
+  end
 
   class App
     include Chamomile::Model
@@ -66,6 +70,7 @@ module LazyRails
       @welcome = WelcomeOverlay.new
       @help = HelpOverlay.new
       @user_settings = UserSettings.new
+      @generator_wizard = GeneratorWizard.new
 
       # Data stores
       @introspect_data = nil
@@ -125,6 +130,7 @@ module LazyRails
     def update(msg)
       return handle_welcome(msg) if @welcome.visible? && msg.is_a?(Chamomile::KeyMsg)
       return handle_help_key(msg) if @help.visible? && msg.is_a?(Chamomile::KeyMsg)
+      return handle_generator_wizard(msg) if @generator_wizard.visible? && msg.is_a?(Chamomile::KeyMsg)
       return handle_confirmation(msg) if @confirmation
       return handle_input_mode(msg) if @input_mode.active?
 
@@ -174,6 +180,8 @@ module LazyRails
         overlay_on(base, render_command_log_box)
       elsif @table_browser.visible?
         overlay_on(base, render_table_browser_box)
+      elsif @generator_wizard.visible?
+        overlay_on(base, @generator_wizard.render(width: @width, height: @height))
       elsif @menu.visible?
         overlay_on(base, @menu.render(width: @width, height: @height))
       elsif @confirmation
@@ -252,6 +260,26 @@ module LazyRails
       return shutdown if signal == :quit
 
       nil
+    end
+
+    def handle_generator_wizard(msg)
+      result = @generator_wizard.handle_key(msg.key)
+      return nil unless result.is_a?(Hash)
+
+      case result[:action]
+      when :run
+        panel_type = generator_panel_type(@generator_wizard.gen_type)
+        return run_rails_cmd(result[:command], panel_type)
+      when :cancel
+        nil
+      end
+    end
+
+    def generator_panel_type(gen_type)
+      case gen_type
+      when "migration" then :database
+      else :models
+      end
     end
 
     def shutdown

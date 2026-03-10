@@ -57,7 +57,7 @@ module LazyRails
       when "M"
         start_confirmation("bin/rails db:rollback", tier: :yellow)
       when "c"
-        @input_mode.start_input(:migration_name, prompt: "Migration name: ", placeholder: "CreateUsers")
+        @generator_wizard.show(gen_type: "migration", gen_label: "Migration")
       when "d"
         migration = current_panel.selected_item
         start_confirmation("bin/rails db:migrate:down VERSION=#{migration.version}", tier: :yellow) if migration
@@ -104,7 +104,9 @@ module LazyRails
     end
 
     def handle_models_key(msg)
-      @input_mode.start_input(:generate_model, prompt: "Model name: ", placeholder: "User name:string email:string") if msg.key == "g"
+      if msg.key == "g"
+        @generator_wizard.show(gen_type: "model", gen_label: "Model")
+      end
       nil
     end
 
@@ -322,8 +324,7 @@ module LazyRails
       when :server_port      then @input_mode.start_input(:change_port, prompt: "Port: ", placeholder: "3000")
       when :db_migrate       then return run_rails_cmd("bin/rails db:migrate", :database)
       when :db_rollback      then start_confirmation("bin/rails db:rollback", tier: :yellow)
-      when :db_create_migration then @input_mode.start_input(:migration_name, prompt: "Migration name: ",
-                                                                              placeholder: "CreateUsers")
+      when :db_create_migration then @generator_wizard.show(gen_type: "migration", gen_label: "Migration")
       when :db_browse_tables then browse_tables_action
       when :db_migrate_down  then migrate_down_action
       when :db_migrate_up    then return migrate_up_action
@@ -338,8 +339,7 @@ module LazyRails
       when :gem_update_all   then start_confirmation("bundle update", tier: :yellow)
       when :gem_open         then return gem_open_action
       when :routes_toggle_group then toggle_route_grouping
-      when :model_generate   then @input_mode.start_input(:generate_model, prompt: "Model name: ",
-                                                                           placeholder: "User name:string email:string")
+      when :model_generate   then @generator_wizard.show(gen_type: "model", gen_label: "Model")
       when :console_eval     then @input_mode.start_input(:eval_expression, prompt: "ruby> ", placeholder: "User.count")
       when :console_open     then return exec("bin/rails", "console")
       when :credentials_decrypt then return decrypt_selected_credential
@@ -370,10 +370,6 @@ module LazyRails
         current_panel.filter_text = value
         current_panel.reset_cursor
         nil
-      when :migration_name
-        run_rails_cmd(%w[bin/rails generate migration] + value.split, :database) unless value.empty?
-      when :generate_model
-        run_rails_cmd(%w[bin/rails generate model] + value.split, :models) unless value.empty?
       when :eval_expression
         run_eval_cmd(value) unless value.empty?
       when :table_where
@@ -391,8 +387,6 @@ module LazyRails
           set_flash("Invalid port: #{value}")
         end
         nil
-      else
-        handle_generator_submit(value, purpose)
       end
     end
 
@@ -583,15 +577,8 @@ module LazyRails
       gt = App::GENERATOR_TYPES.find { |g| g[:type] == gen_type }
       return unless gt
 
-      @input_mode.start_input(:"generate_#{gen_type}", prompt: "#{gt[:label]} args: ", placeholder: gt[:placeholder])
+      @generator_wizard.show(gen_type: gen_type, gen_label: gt[:label])
     end
 
-    def handle_generator_submit(value, purpose)
-      gen_match = purpose.to_s.match(/\Agenerate_(.+)\z/)
-      return unless gen_match && !value.empty?
-
-      gen_type = gen_match[1]
-      run_rails_cmd(%W[bin/rails generate #{gen_type}] + value.split, :models)
-    end
   end
 end

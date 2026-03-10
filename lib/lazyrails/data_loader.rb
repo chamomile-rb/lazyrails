@@ -76,7 +76,7 @@ module LazyRails
       cmd(lambda {
         result = CommandRunner.run(test_cmd, dir: project_dir)
         status = result.success? ? :passed : :failed
-        TestFinishedMsg.new(path: path, status: status, output: result.stdout + result.stderr)
+        TestFinishedMsg.new(path: path, status: status, output: result.stdout + result.stderr, command_entry: result)
       })
     end
 
@@ -118,7 +118,7 @@ module LazyRails
           error: result.success? ? nil : result.stderr.strip,
           duration_ms: result.duration_ms
         )
-        EvalFinishedMsg.new(entry: entry)
+        EvalFinishedMsg.new(entry: entry, command_entry: result)
       rescue StandardError => e
         entry = EvalEntry.new(expression: expression, result: nil, error: e.message, duration_ms: 0)
         EvalFinishedMsg.new(entry: entry)

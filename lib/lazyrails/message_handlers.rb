@@ -104,6 +104,7 @@ module LazyRails
     end
 
     def handle_test_finished(msg)
+      @command_log.add(msg.command_entry) if msg.command_entry
       tests_panel = find_panel(:tests)
       idx = tests_panel.items.index { |f| f.path == msg.path }
       if idx
@@ -129,6 +130,7 @@ module LazyRails
     end
 
     def handle_eval_finished(msg)
+      @command_log.add(msg.command_entry) if msg.command_entry
       panel = find_panel(:console)
       @eval_history.unshift(msg.entry)
       @eval_history = @eval_history.first(50)

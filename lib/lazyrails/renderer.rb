@@ -210,7 +210,19 @@ module LazyRails
     end
 
     def render_filter_bar
-      Flourish::Style.new.width(@width).render(@input_mode.view)
+      label = Flourish::Style.new.bold.foreground("#b48ead").render(" #{@input_mode.styled_label}")
+      input = @input_mode.view
+      hints = Flourish::Style.new.foreground("#666666").render("Enter submit \u2502 Esc cancel ")
+
+      hints_len = "Enter submit | Esc cancel ".length
+      label_len = @input_mode.styled_label.length + 1
+      input_area = @width - label_len - hints_len
+
+      # Build: [label][input padding...][hints]
+      input_visible = Flourish::ANSI.printable_width(input)
+      padding = input_area > input_visible ? " " * (input_area - input_visible) : ""
+
+      Flourish::Style.new.width(@width).render("#{label}#{input}#{padding}#{hints}")
     end
 
     def render_confirmation_box

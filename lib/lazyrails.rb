@@ -36,6 +36,7 @@ require_relative "lazyrails/input_mode"
 require_relative "lazyrails/welcome_overlay"
 require_relative "lazyrails/help_overlay"
 require_relative "lazyrails/user_settings"
+require_relative "lazyrails/generator_wizard"
 
 # Parsers
 require_relative "lazyrails/parsers/schema"

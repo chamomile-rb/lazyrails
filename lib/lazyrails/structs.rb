@@ -156,7 +156,11 @@ module LazyRails
   TestsLoadedMsg = Data.define(:files, :error)
   CommandFinishedMsg = Data.define(:entry, :panel)
   TableRowsLoadedMsg = Data.define(:table, :columns, :rows, :total, :error)
-  EvalFinishedMsg = Data.define(:entry)
+  EvalFinishedMsg = Data.define(:entry, :command_entry) do
+    def initialize(command_entry: nil, **kwargs)
+      super
+    end
+  end
   CredentialsLoadedMsg = Data.define(:environment, :content, :error)
   MailersLoadedMsg = Data.define(:previews, :error)
   MailerPreviewLoadedMsg = Data.define(:preview, :subject, :to, :from, :body, :error)

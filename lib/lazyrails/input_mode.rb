@@ -8,6 +8,7 @@ module LazyRails
       @active = false
       @purpose = nil
       @input = nil
+      @label = ""
     end
 
     def active? = @active
@@ -39,12 +40,17 @@ module LazyRails
       @input&.view || ""
     end
 
+    def styled_label
+      @label
+    end
+
     private
 
     def activate(purpose, prompt:, placeholder:)
       @active = true
       @purpose = purpose
-      @input = Petals::TextInput.new(prompt: prompt, placeholder: placeholder)
+      @label = prompt
+      @input = Petals::TextInput.new(prompt: "", placeholder: placeholder)
       @input.focus
     end
   end
