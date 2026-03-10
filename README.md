@@ -2,7 +2,7 @@
 
 A [lazygit](https://github.com/jesseduffield/lazygit)-style terminal UI for Rails. Everything the Rails CLI can do, in one split-pane interface.
 
-<!-- TODO: add screenshot or demo GIF here -->
+![Lazyrails overview](docs/overview.gif)
 
 Built with [Chamomile](https://github.com/xjackk/chamomile) (chamomile + petals + flourish).
 
@@ -48,6 +48,24 @@ LazyRails has 13 panels you can tab between. Each one wraps a chunk of the Rails
 | Jobs        | Solid Queue — retry, discard, dispatch, filter by status |
 
 If you add a `.lazyrails.yml`, you also get a Custom Commands panel (see below).
+
+### Routes
+
+Browse all routes with color-coded HTTP verbs. Filter with `/`, group by controller with `g`, and drill into any route for details.
+
+![Routes filtering](docs/routes-filter.gif)
+
+### Generator Wizard
+
+Press `G` to open the generator menu. A multi-step wizard walks you through naming, adding fields with type selection, and reviewing the command before it runs.
+
+![Generator wizard](docs/generate-model.gif)
+
+### Inline Console
+
+Evaluate Ruby expressions directly from the Console panel without dropping to `rails console`. Results stay in your history.
+
+![Console evaluation](docs/console-eval.gif)
 
 ## Keybindings
 
