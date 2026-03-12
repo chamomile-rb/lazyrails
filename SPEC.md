@@ -20,11 +20,15 @@ Runtime requirement: a Rails project directory (detected via `bin/rails`, or `Ge
 
 ## Architecture
 
-### Elm Architecture (Model/Update/View)
+### Architecture
+
+LazyRails::App uses Chamomile's event-driven model with `update(msg)` dispatching
+to handle input and lifecycle events.
 
 ```
 LazyRails::App
   include Chamomile::Model
+  include Chamomile::Commands
 
   @panels         — array of Panel structs
   @focused_panel  — index into @panels

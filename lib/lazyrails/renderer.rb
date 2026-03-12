@@ -44,7 +44,7 @@ module LazyRails
         sections << output
       end
 
-      Flourish.join_vertical(Flourish::LEFT, *sections)
+      Flourish.vertical(sections, align: :left)
     end
 
     def panel_cache_key(panel, focused, width, height)
@@ -110,9 +110,9 @@ module LazyRails
     end
 
     def render_right_pane(width)
-      @detail_viewport.set_width(width - 4)
-      @detail_viewport.set_height(@height - 4)
-      @detail_viewport.set_content(@detail_content)
+      @detail_viewport.width   = width - 4
+      @detail_viewport.height  = @height - 4
+      @detail_viewport.content = @detail_content
 
       content = @detail_viewport.view
       border_color = UNFOCUSED_COLOR

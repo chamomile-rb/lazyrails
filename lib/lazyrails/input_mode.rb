@@ -31,7 +31,7 @@ module LazyRails
       when :escape then :cancelled
       when :enter  then { action: :submitted, value: @input.value, purpose: @purpose }
       else
-        @input.update(msg)
+        @input.handle(msg)
         @purpose == :filter ? { action: :changed, value: @input.value } : nil
       end
     end

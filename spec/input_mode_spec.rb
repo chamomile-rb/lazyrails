@@ -3,8 +3,8 @@
 RSpec.describe LazyRails::InputMode do
   subject(:input_mode) { described_class.new }
 
-  # Minimal stub for Chamomile::KeyMsg
-  KeyMsg = Struct.new(:key)
+  # Minimal stub for Chamomile::KeyEvent
+  KeyEvent = Struct.new(:key)
 
   describe "#start_filter" do
     it "activates with filter purpose" do
@@ -34,13 +34,13 @@ RSpec.describe LazyRails::InputMode do
   describe "#handle_key" do
     it "returns :cancelled on escape" do
       input_mode.start_filter
-      result = input_mode.handle_key(KeyMsg.new(:escape))
+      result = input_mode.handle_key(KeyEvent.new(:escape))
       expect(result).to eq(:cancelled)
     end
 
     it "returns submitted hash on enter" do
       input_mode.start_filter
-      result = input_mode.handle_key(KeyMsg.new(:enter))
+      result = input_mode.handle_key(KeyEvent.new(:enter))
       expect(result).to be_a(Hash)
       expect(result[:action]).to eq(:submitted)
       expect(result[:purpose]).to eq(:filter)
@@ -48,14 +48,14 @@ RSpec.describe LazyRails::InputMode do
 
     it "returns changed hash for filter purpose on other keys" do
       input_mode.start_filter
-      result = input_mode.handle_key(KeyMsg.new("a"))
+      result = input_mode.handle_key(KeyEvent.new("a"))
       expect(result).to be_a(Hash)
       expect(result[:action]).to eq(:changed)
     end
 
     it "returns nil for non-filter purpose on other keys" do
       input_mode.start_input(:change_port, prompt: "Port: ", placeholder: "3000")
-      result = input_mode.handle_key(KeyMsg.new("3"))
+      result = input_mode.handle_key(KeyEvent.new("3"))
       expect(result).to be_nil
     end
   end
