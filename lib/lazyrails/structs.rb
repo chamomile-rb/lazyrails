@@ -150,20 +150,33 @@ module LazyRails
     end
   end
 
-  # Messages for async data loading
-  IntrospectLoadedMsg = Data.define(:data, :error)
-  GemsLoadedMsg = Data.define(:gems, :error)
-  TestsLoadedMsg = Data.define(:files, :error)
-  CommandFinishedMsg = Data.define(:entry, :panel)
-  TableRowsLoadedMsg = Data.define(:table, :columns, :rows, :total, :error)
-  EvalFinishedMsg = Data.define(:entry, :command_entry) do
+  # Events for async data loading
+  IntrospectLoadedEvent = Data.define(:data, :error)
+  GemsLoadedEvent = Data.define(:gems, :error)
+  TestsLoadedEvent = Data.define(:files, :error)
+  CommandFinishedEvent = Data.define(:entry, :panel)
+  TableRowsLoadedEvent = Data.define(:table, :columns, :rows, :total, :error)
+  EvalFinishedEvent = Data.define(:entry, :command_entry) do
     def initialize(command_entry: nil, **kwargs)
       super
     end
   end
-  CredentialsLoadedMsg = Data.define(:environment, :content, :error)
-  MailersLoadedMsg = Data.define(:previews, :error)
-  MailerPreviewLoadedMsg = Data.define(:preview, :subject, :to, :from, :body, :error)
-  JobsLoadedMsg = Data.define(:available, :jobs, :counts, :error)
-  JobActionMsg = Data.define(:action, :job_id, :success, :error)
+  CredentialsLoadedEvent = Data.define(:environment, :content, :error)
+  MailersLoadedEvent = Data.define(:previews, :error)
+  MailerPreviewLoadedEvent = Data.define(:preview, :subject, :to, :from, :body, :error)
+  JobsLoadedEvent = Data.define(:available, :jobs, :counts, :error)
+  JobActionEvent = Data.define(:action, :job_id, :success, :error)
+
+  # Backward compat aliases
+  IntrospectLoadedMsg    = IntrospectLoadedEvent
+  GemsLoadedMsg          = GemsLoadedEvent
+  TestsLoadedMsg         = TestsLoadedEvent
+  CommandFinishedMsg     = CommandFinishedEvent
+  TableRowsLoadedMsg     = TableRowsLoadedEvent
+  EvalFinishedMsg        = EvalFinishedEvent
+  CredentialsLoadedMsg   = CredentialsLoadedEvent
+  MailersLoadedMsg       = MailersLoadedEvent
+  MailerPreviewLoadedMsg = MailerPreviewLoadedEvent
+  JobsLoadedMsg          = JobsLoadedEvent
+  JobActionMsg           = JobActionEvent
 end

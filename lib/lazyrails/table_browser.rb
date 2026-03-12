@@ -67,15 +67,13 @@ module LazyRails
       @error = nil
       @total_rows = total
 
-      table_columns = columns.map do |col|
-        Petals::Table::Column.new(title: col, width: column_width(col, columns.size))
-      end
-
       table_rows = rows.map do |row|
         row.map { |v| v.nil? ? "NULL" : v.to_s }
       end
 
-      @table_widget = Petals::Table.new(columns: table_columns, rows: table_rows)
+      @table_widget = Petals::Table.new(rows: table_rows) do |t|
+        columns.each { |col| t.column col, width: column_width(col, columns.size) }
+      end
     end
 
     def current_query_params

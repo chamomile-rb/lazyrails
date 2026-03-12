@@ -12,12 +12,12 @@ module LazyRails
 
         if result.success?
           data = Introspect.load(result.stdout)
-          IntrospectLoadedMsg.new(data: data, error: nil)
+          IntrospectLoadedEvent.new(data: data, error: nil)
         else
-          IntrospectLoadedMsg.new(data: nil, error: result.stderr)
+          IntrospectLoadedEvent.new(data: nil, error: result.stderr)
         end
       rescue StandardError => e
-        IntrospectLoadedMsg.new(data: nil, error: e.message)
+        IntrospectLoadedEvent.new(data: nil, error: e.message)
       end)
     end
 
@@ -26,9 +26,9 @@ module LazyRails
       cmd(lambda do
         lockfile = File.join(project_dir, "Gemfile.lock")
         gems = Parsers::GemfileLock.parse(lockfile)
-        GemsLoadedMsg.new(gems: gems, error: nil)
+        GemsLoadedEvent.new(gems: gems, error: nil)
       rescue StandardError => e
-        GemsLoadedMsg.new(gems: [], error: e.message)
+        GemsLoadedEvent.new(gems: [], error: e.message)
       end)
     end
 
@@ -51,9 +51,9 @@ module LazyRails
           end
         end
 
-        TestsLoadedMsg.new(files: files, error: nil)
+        TestsLoadedEvent.new(files: files, error: nil)
       rescue StandardError => e
-        TestsLoadedMsg.new(files: [], error: e.message)
+        TestsLoadedEvent.new(files: [], error: e.message)
       end)
     end
 
@@ -63,7 +63,7 @@ module LazyRails
       project_dir = @project.dir
       cmd(lambda {
         result = CommandRunner.run(command, dir: project_dir)
-        CommandFinishedMsg.new(entry: result, panel: panel_type)
+        CommandFinishedEvent.new(entry: result, panel: panel_type)
       })
     end
 
@@ -76,7 +76,7 @@ module LazyRails
       cmd(lambda {
         result = CommandRunner.run(test_cmd, dir: project_dir)
         status = result.success? ? :passed : :failed
-        TestFinishedMsg.new(path: path, status: status, output: result.stdout + result.stderr, command_entry: result)
+        TestFinishedEvent.new(path: path, status: status, output: result.stdout + result.stderr, command_entry: result)
       })
     end
 
@@ -91,16 +91,16 @@ module LazyRails
         if result.success?
           data = JSON.parse(result.stdout, symbolize_names: false)
           if data["error"]
-            TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], total: 0, error: data["error"])
+            TableRowsLoadedEvent.new(table: table_name, columns: [], rows: [], total: 0, error: data["error"])
           else
-            TableRowsLoadedMsg.new(table: table_name, columns: data["columns"], rows: data["rows"],
+            TableRowsLoadedEvent.new(table: table_name, columns: data["columns"], rows: data["rows"],
                                    total: data["total"] || 0, error: nil)
           end
         else
-          TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], total: 0, error: result.stderr)
+          TableRowsLoadedEvent.new(table: table_name, columns: [], rows: [], total: 0, error: result.stderr)
         end
       rescue StandardError => e
-        TableRowsLoadedMsg.new(table: table_name, columns: [], rows: [], total: 0, error: e.message)
+        TableRowsLoadedEvent.new(table: table_name, columns: [], rows: [], total: 0, error: e.message)
       end)
     end
 
@@ -118,10 +118,10 @@ module LazyRails
           error: result.success? ? nil : result.stderr.strip,
           duration_ms: result.duration_ms
         )
-        EvalFinishedMsg.new(entry: entry, command_entry: result)
+        EvalFinishedEvent.new(entry: entry, command_entry: result)
       rescue StandardError => e
         entry = EvalEntry.new(expression: expression, result: nil, error: e.message, duration_ms: 0)
-        EvalFinishedMsg.new(entry: entry)
+        EvalFinishedEvent.new(entry: entry)
       end)
     end
 
@@ -132,13 +132,13 @@ module LazyRails
         args = ["bin/rails", "credentials:show"]
         args += ["--environment", env] unless env == "development"
         result = CommandRunner.run(args, dir: project_dir)
-        CredentialsLoadedMsg.new(
+        CredentialsLoadedEvent.new(
           environment: credential_file.environment,
           content: result.success? ? result.stdout : nil,
           error: result.success? ? nil : result.stderr
         )
       rescue StandardError => e
-        CredentialsLoadedMsg.new(environment: credential_file.environment, content: nil, error: e.message)
+        CredentialsLoadedEvent.new(environment: credential_file.environment, content: nil, error: e.message)
       end)
     end
 
@@ -167,9 +167,9 @@ module LazyRails
           end
         end
 
-        MailersLoadedMsg.new(previews: previews, error: nil)
+        MailersLoadedEvent.new(previews: previews, error: nil)
       rescue StandardError => e
-        MailersLoadedMsg.new(previews: [], error: e.message)
+        MailersLoadedEvent.new(previews: [], error: e.message)
       end)
     end
 
@@ -187,13 +187,13 @@ module LazyRails
         result = CommandRunner.run(["bin/rails", "runner", script], dir: project_dir)
         if result.success?
           data = JSON.parse(result.stdout, symbolize_names: true)
-          MailerPreviewLoadedMsg.new(preview: preview, error: nil, **data)
+          MailerPreviewLoadedEvent.new(preview: preview, error: nil, **data)
         else
-          MailerPreviewLoadedMsg.new(preview: preview, subject: nil, to: nil,
+          MailerPreviewLoadedEvent.new(preview: preview, subject: nil, to: nil,
                                      from: nil, body: nil, error: result.stderr)
         end
       rescue StandardError => e
-        MailerPreviewLoadedMsg.new(preview: preview, subject: nil, to: nil,
+        MailerPreviewLoadedEvent.new(preview: preview, subject: nil, to: nil,
                                    from: nil, body: nil, error: e.message)
       end)
     end
@@ -211,16 +211,16 @@ module LazyRails
 
         if result.success?
           data = JSON.parse(result.stdout, symbolize_names: false)
-          return JobsLoadedMsg.new(available: false, jobs: [], counts: {}, error: nil) if data["available"] == false
+          return JobsLoadedEvent.new(available: false, jobs: [], counts: {}, error: nil) if data["available"] == false
 
           counts = (data["counts"] || {}).transform_keys(&:to_sym)
           jobs = (data["jobs"] || []).map { |j| parse_job_entry(j) }
-          JobsLoadedMsg.new(available: true, jobs: jobs, counts: counts, error: nil)
+          JobsLoadedEvent.new(available: true, jobs: jobs, counts: counts, error: nil)
         else
-          JobsLoadedMsg.new(available: true, jobs: [], counts: {}, error: result.stderr)
+          JobsLoadedEvent.new(available: true, jobs: [], counts: {}, error: result.stderr)
         end
       rescue StandardError => e
-        JobsLoadedMsg.new(available: true, jobs: [], counts: {}, error: e.message)
+        JobsLoadedEvent.new(available: true, jobs: [], counts: {}, error: e.message)
       end)
     end
 
@@ -245,12 +245,12 @@ module LazyRails
         )
         if result.success?
           data = JSON.parse(result.stdout, symbolize_names: false)
-          JobActionMsg.new(action: "retry_all", job_id: nil, success: data["success"], error: data["error"])
+          JobActionEvent.new(action: "retry_all", job_id: nil, success: data["success"], error: data["error"])
         else
-          JobActionMsg.new(action: "retry_all", job_id: nil, success: false, error: result.stderr)
+          JobActionEvent.new(action: "retry_all", job_id: nil, success: false, error: result.stderr)
         end
       rescue StandardError => e
-        JobActionMsg.new(action: "retry_all", job_id: nil, success: false, error: e.message)
+        JobActionEvent.new(action: "retry_all", job_id: nil, success: false, error: e.message)
       end)
     end
 
@@ -269,12 +269,12 @@ module LazyRails
         result = CommandRunner.run(["bin/rails", "runner", script, action, id.to_s], dir: project_dir)
         if result.success?
           data = JSON.parse(result.stdout, symbolize_names: false)
-          JobActionMsg.new(action: action, job_id: id, success: data["success"], error: data["error"])
+          JobActionEvent.new(action: action, job_id: id, success: data["success"], error: data["error"])
         else
-          JobActionMsg.new(action: action, job_id: id, success: false, error: result.stderr)
+          JobActionEvent.new(action: action, job_id: id, success: false, error: result.stderr)
         end
       rescue StandardError => e
-        JobActionMsg.new(action: action, job_id: id, success: false, error: e.message)
+        JobActionEvent.new(action: action, job_id: id, success: false, error: e.message)
       end)
     end
 

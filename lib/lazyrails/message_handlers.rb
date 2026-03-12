@@ -205,8 +205,8 @@ module LazyRails
       @width = msg.width
       @height = msg.height
       right_width = @width - (@width * App::LEFT_WIDTH_RATIO).to_i - 1
-      @detail_viewport.set_width(right_width - 4)
-      @detail_viewport.set_height(@height - 4)
+      @detail_viewport.width  = right_width - 4
+      @detail_viewport.height = @height - 4
       update_detail_content
     end
   end

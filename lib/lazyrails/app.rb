@@ -2,7 +2,7 @@
 
 module LazyRails
   # Custom messages for async operations
-  TestFinishedMsg = Data.define(:path, :status, :output, :command_entry) do
+  TestFinishedEvent = Data.define(:path, :status, :output, :command_entry) do
     def initialize(command_entry: nil, **kwargs)
       super
     end
@@ -128,29 +128,29 @@ module LazyRails
     end
 
     def update(msg)
-      return handle_welcome(msg) if @welcome.visible? && msg.is_a?(Chamomile::KeyMsg)
-      return handle_help_key(msg) if @help.visible? && msg.is_a?(Chamomile::KeyMsg)
-      return handle_generator_wizard(msg) if @generator_wizard.visible? && msg.is_a?(Chamomile::KeyMsg)
+      return handle_welcome(msg) if @welcome.visible? && msg.is_a?(Chamomile::KeyEvent)
+      return handle_help_key(msg) if @help.visible? && msg.is_a?(Chamomile::KeyEvent)
+      return handle_generator_wizard(msg) if @generator_wizard.visible? && msg.is_a?(Chamomile::KeyEvent)
       return handle_confirmation(msg) if @confirmation
       return handle_input_mode(msg) if @input_mode.active?
 
       case msg
-      when Chamomile::WindowSizeMsg then handle_resize(msg)
-      when Chamomile::KeyMsg        then return handle_key(msg)
-      when Chamomile::TickMsg       then return handle_tick
-      when Chamomile::InterruptMsg  then return shutdown
-      when IntrospectLoadedMsg      then return handle_introspect_loaded(msg)
-      when GemsLoadedMsg            then handle_gems_loaded(msg)
-      when TestsLoadedMsg           then handle_tests_loaded(msg)
-      when CommandFinishedMsg       then return handle_command_finished(msg)
-      when TestFinishedMsg          then handle_test_finished(msg)
-      when TableRowsLoadedMsg       then handle_table_rows_loaded(msg)
-      when EvalFinishedMsg          then handle_eval_finished(msg)
-      when CredentialsLoadedMsg     then handle_credentials_loaded(msg)
-      when MailersLoadedMsg         then handle_mailers_loaded(msg)
-      when MailerPreviewLoadedMsg   then handle_mailer_preview_loaded(msg)
-      when JobsLoadedMsg            then handle_jobs_loaded(msg)
-      when JobActionMsg             then return handle_job_action(msg)
+      when Chamomile::ResizeEvent then handle_resize(msg)
+      when Chamomile::KeyEvent        then return handle_key(msg)
+      when Chamomile::TickEvent       then return handle_tick
+      when Chamomile::InterruptEvent  then return shutdown
+      when IntrospectLoadedEvent      then return handle_introspect_loaded(msg)
+      when GemsLoadedEvent            then handle_gems_loaded(msg)
+      when TestsLoadedEvent           then handle_tests_loaded(msg)
+      when CommandFinishedEvent       then return handle_command_finished(msg)
+      when TestFinishedEvent          then handle_test_finished(msg)
+      when TableRowsLoadedEvent       then handle_table_rows_loaded(msg)
+      when EvalFinishedEvent          then handle_eval_finished(msg)
+      when CredentialsLoadedEvent     then handle_credentials_loaded(msg)
+      when MailersLoadedEvent         then handle_mailers_loaded(msg)
+      when MailerPreviewLoadedEvent   then handle_mailer_preview_loaded(msg)
+      when JobsLoadedEvent            then handle_jobs_loaded(msg)
+      when JobActionEvent             then return handle_job_action(msg)
       end
 
       nil
@@ -163,7 +163,7 @@ module LazyRails
       left_content = render_left_panels(left_width)
       right_content = render_right_pane(right_width)
 
-      layout = Flourish.join_horizontal(Flourish::TOP, left_content, " ", right_content)
+      layout = Flourish.horizontal([left_content, " ", right_content], align: :top)
 
       base = if @input_mode.active?
                "#{layout}\n#{render_filter_bar}"
@@ -448,7 +448,7 @@ module LazyRails
     end
 
     def handle_input_mode(msg)
-      return nil unless msg.is_a?(Chamomile::KeyMsg)
+      return nil unless msg.is_a?(Chamomile::KeyEvent)
 
       signal = @input_mode.handle_key(msg)
 
@@ -482,7 +482,7 @@ module LazyRails
     end
 
     def handle_confirmation(msg)
-      return nil unless msg.is_a?(Chamomile::KeyMsg)
+      return nil unless msg.is_a?(Chamomile::KeyEvent)
 
       @confirmation.handle_key(msg.key)
 
