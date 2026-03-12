@@ -690,7 +690,7 @@ CommandEntry = Data.define(:command, :exit_code, :duration_ms, :timestamp, :stdo
 
 - Panel borders: `Flourish::Border::ROUNDED`
 - Focused panel: `#7d56f4`, unfocused: `#444444`
-- Layout: `Flourish.join_horizontal` / `Flourish.join_vertical`
+- Layout: `Flourish.horizontal` / `Flourish.vertical`
 - Status bar: dim foreground
 - Verb colors: GET=`#04b575`, POST=`#5b9bd5`, PUT/PATCH=`#e5c07b`, DELETE=`#ff6347`
 - Migration status: up=`#04b575`, down=`#ff6347`
