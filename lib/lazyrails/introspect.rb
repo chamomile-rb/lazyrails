@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "json"
+
 module LazyRails
   class Introspect
     IntrospectData = Data.define(:routes, :tables, :migrations, :models, :connection, :about, :stats, :notes,

@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "bundler"
+require "open3"
+
 module LazyRails
   class CommandRunner
     # cmd can be a String (passed to shell) or Array (exec'd directly, no shell).

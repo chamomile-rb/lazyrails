@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "bundler"
+require "open3"
+
 module LazyRails
   class ServerManager
     MAX_LOG_LINES = 2000
