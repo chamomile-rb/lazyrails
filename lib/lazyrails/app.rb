@@ -269,7 +269,7 @@ module LazyRails
       case result[:action]
       when :run
         panel_type = generator_panel_type(@generator_wizard.gen_type)
-        return run_rails_cmd(result[:command], panel_type)
+        run_rails_cmd(result[:command], panel_type)
       when :cancel
         nil
       end

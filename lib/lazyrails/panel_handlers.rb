@@ -104,9 +104,7 @@ module LazyRails
     end
 
     def handle_models_key(msg)
-      if msg.key == "g"
-        @generator_wizard.show(gen_type: "model", gen_label: "Model")
-      end
+      @generator_wizard.show(gen_type: "model", gen_label: "Model") if msg.key == "g"
       nil
     end
 
@@ -579,6 +577,5 @@ module LazyRails
 
       @generator_wizard.show(gen_type: gen_type, gen_label: gt[:label])
     end
-
   end
 end

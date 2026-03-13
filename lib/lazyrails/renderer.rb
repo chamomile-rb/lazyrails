@@ -26,11 +26,11 @@ module LazyRails
 
         border_color = focused ? FOCUSED_COLOR : UNFOCUSED_COLOR
         box = Chamomile::Style.new
-                             .width(width)
-                             .height(h)
-                             .border(Chamomile::Border::ROUNDED)
-                             .border_foreground(border_color)
-                             .render(content)
+                              .width(width)
+                              .height(h)
+                              .border(Chamomile::Border::ROUNDED)
+                              .border_foreground(border_color)
+                              .render(content)
 
         box_lines = box.lines
         if box_lines.any?
@@ -118,11 +118,11 @@ module LazyRails
       border_color = UNFOCUSED_COLOR
 
       box = Chamomile::Style.new
-                           .width(width)
-                           .height(@height - 2)
-                           .border(Chamomile::Border::ROUNDED)
-                           .border_foreground(border_color)
-                           .render(content)
+                            .width(width)
+                            .height(@height - 2)
+                            .border(Chamomile::Border::ROUNDED)
+                            .border_foreground(border_color)
+                            .render(content)
 
       box_lines = box.lines
       if box_lines.any?
@@ -193,18 +193,16 @@ module LazyRails
     end
 
     def render_status_bar
-      if @flash.active?
-        return Chamomile::Style.new.foreground("#e5c07b").width(@width).render("  #{@flash.message}".slice(0, @width))
-      end
+      return Chamomile::Style.new.foreground("#e5c07b").width(@width).render("  #{@flash.message}".slice(0, @width)) if @flash.active?
 
       hints = [
         ["Tab", "navigate"], ["j/k", "scroll"], ["Enter", "select"],
         ["x", "actions"], ["L", "log"], ["?", "help"], ["q", "quit"]
       ]
-      bar = " " + hints.map do |key, desc|
-        styled_key = Chamomile::Style.new.bold.foreground("#b48ead").render(key)
+      bar = " #{hints.map do |key, desc|
+        styled_key = Chamomile::Style.new.bold.foreground('#b48ead').render(key)
         "#{styled_key} #{desc}"
-      end.join(" \u2502 ")
+      end.join(" \u2502 ")}"
 
       Chamomile::Style.new.foreground("#999999").width(@width).render(bar)
     end
@@ -242,15 +240,14 @@ module LazyRails
       lines << Chamomile::Style.new.foreground("#666666").render("Esc cancel")
       content = lines.join("\n")
 
-      box_width = [[cmd.length + 6, text.length + 6].max, @width - 8].min
-      box_width = [box_width, 30].max
+      box_width = [cmd.length + 6, text.length + 6].max.clamp(30, @width - 8)
 
       box = Chamomile::Style.new
-                           .width(box_width)
-                           .border(Chamomile::Border::ROUNDED)
-                           .border_foreground(color)
-                           .padding(0, 1)
-                           .render(content)
+                            .width(box_width)
+                            .border(Chamomile::Border::ROUNDED)
+                            .border_foreground(color)
+                            .padding(0, 1)
+                            .render(content)
 
       box_lines = box.lines
       if box_lines.any?
@@ -269,12 +266,12 @@ module LazyRails
       box_width = [box_width, @width - 2].min
 
       box = Chamomile::Style.new
-                           .width(box_width)
-                           .height(@height - 4)
-                           .border(Chamomile::Border::ROUNDED)
-                           .border_foreground("#b48ead")
-                           .padding(0, 1)
-                           .render(content)
+                            .width(box_width)
+                            .height(@height - 4)
+                            .border(Chamomile::Border::ROUNDED)
+                            .border_foreground("#b48ead")
+                            .padding(0, 1)
+                            .render(content)
 
       box_lines = box.lines
       if box_lines.any?
@@ -293,12 +290,12 @@ module LazyRails
       box_width = [box_width, @width - 2].min
 
       box = Chamomile::Style.new
-                           .width(box_width)
-                           .height(@height - 4)
-                           .border(Chamomile::Border::ROUNDED)
-                           .border_foreground("#b48ead")
-                           .padding(0, 1)
-                           .render(content)
+                            .width(box_width)
+                            .height(@height - 4)
+                            .border(Chamomile::Border::ROUNDED)
+                            .border_foreground("#b48ead")
+                            .padding(0, 1)
+                            .render(content)
 
       box_lines = box.lines
       if box_lines.any?

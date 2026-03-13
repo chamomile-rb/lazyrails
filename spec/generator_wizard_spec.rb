@@ -279,7 +279,7 @@ RSpec.describe LazyRails::GeneratorWizard do
       type_string("AddStatusToOrders")
       wizard.handle_key(:enter)
 
-      add_field("status", 1)   # integer
+      add_field("status", 1) # integer
 
       wizard.handle_key(:enter)
       result = wizard.handle_key(:enter)

@@ -43,7 +43,7 @@ module LazyRails
       @field_name_input = +""
       @type_cursor = 0
       @field_cursor = 0
-      @action_toggles = CONTROLLER_ACTIONS.each_with_object({}) { |a, h| h[a] = false }
+      @action_toggles = CONTROLLER_ACTIONS.to_h { |a| [a, false] }
       @action_cursor = 0
       @editing_field_name = true
       @error = nil
@@ -86,11 +86,11 @@ module LazyRails
       footer = render_footer
 
       box = Chamomile::Style.new
-                           .width(menu_width)
-                           .border(Chamomile::Border::ROUNDED)
-                           .border_foreground("#b48ead")
-                           .padding(0, 1)
-                           .render("#{content}\n\n#{footer}")
+                            .width(menu_width)
+                            .border(Chamomile::Border::ROUNDED)
+                            .border_foreground("#b48ead")
+                            .padding(0, 1)
+                            .render("#{content}\n\n#{footer}")
 
       box_lines = box.lines
       if box_lines.any?
@@ -139,11 +139,10 @@ module LazyRails
       when :enter
         if @name.strip.empty?
           @error = "Name cannot be empty"
-          nil
         else
           @step = next_step
-          nil
         end
+        nil
       when :backspace
         @name.chop!
         nil
@@ -204,7 +203,6 @@ module LazyRails
         else
           @field_name_input = +""
         end
-        nil
       when :enter, :tab
         if @field_name_input.strip.empty?
           # No field name entered — move to review (fields optional for migrations)
@@ -217,39 +215,32 @@ module LazyRails
           @editing_field_name = false
           @type_cursor = 0
         end
-        nil
       when :backspace
         if @field_name_input.empty? && @fields.any?
           @fields.pop
         else
           @field_name_input.chop!
         end
-        nil
       else
         @field_name_input << key.to_s if key.is_a?(String) && key.length == 1
-        nil
       end
+      nil
     end
 
     def handle_field_type_key(key)
       case key
       when :escape, :backspace
         @editing_field_name = true
-        nil
       when "j", :down
         @type_cursor = (@type_cursor + 1) % COLUMN_TYPES.size
-        nil
       when "k", :up
         @type_cursor = (@type_cursor - 1) % COLUMN_TYPES.size
-        nil
       when :enter
         @fields << { name: @field_name_input.strip, type: COLUMN_TYPES[@type_cursor] }
         @field_name_input = +""
         @editing_field_name = true
-        nil
-      else
-        nil
       end
+      nil
     end
 
     def render_fields_step
@@ -259,7 +250,7 @@ module LazyRails
 
       # Show existing fields
       if @fields.any?
-        @fields.each_with_index do |f, i|
+        @fields.each_with_index do |f, _i|
           marker = Chamomile::Style.new.foreground("#a3be8c").render("\u2713")
           lines << "  #{marker} #{f[:name]}:#{f[:type]}"
         end
@@ -269,20 +260,22 @@ module LazyRails
       if @editing_field_name
         lines << "Field name: #{@field_name_input}\u2588"
         lines << ""
-        hint = @fields.empty? ? "Type a field name, then press Enter to pick its type" : "Type a field name, Enter to pick type, Enter with empty to finish"
+        hint = if @fields.empty?
+                 "Type a field name, then press Enter to pick its type"
+               else
+                 "Type a field name, Enter to pick type, Enter with empty to finish"
+               end
         lines << Chamomile::Style.new.foreground("#666666").render(hint)
-        if @fields.any?
-          lines << Chamomile::Style.new.foreground("#666666").render("Backspace with empty input to remove last field")
-        end
+        lines << Chamomile::Style.new.foreground("#666666").render("Backspace with empty input to remove last field") if @fields.any?
       else
         lines << "Pick type for '#{@field_name_input}':"
         lines << ""
         COLUMN_TYPES.each_with_index do |t, i|
-          if i == @type_cursor
-            lines << ViewHelpers.selected_style.render("  #{t}  ")
-          else
-            lines << "  #{t}"
-          end
+          lines << if i == @type_cursor
+                     ViewHelpers.selected_style.render("  #{t}  ")
+                   else
+                     "  #{t}"
+                   end
         end
       end
 
@@ -300,28 +293,21 @@ module LazyRails
       case key
       when :escape
         @step = :name
-        nil
       when :enter
         @step = :review
-        nil
       when "j", :down
         @action_cursor = (@action_cursor + 1) % CONTROLLER_ACTIONS.size
-        nil
       when "k", :up
         @action_cursor = (@action_cursor - 1) % CONTROLLER_ACTIONS.size
-        nil
       when " "
         action = CONTROLLER_ACTIONS[@action_cursor]
         @action_toggles[action] = !@action_toggles[action]
-        nil
       when "a"
         # Toggle all
         all_on = CONTROLLER_ACTIONS.all? { |a| @action_toggles[a] }
         CONTROLLER_ACTIONS.each { |a| @action_toggles[a] = !all_on }
-        nil
-      else
-        nil
       end
+      nil
     end
 
     def render_actions_step
@@ -333,11 +319,11 @@ module LazyRails
         checked = @action_toggles[action]
         marker = checked ? Chamomile::Style.new.foreground("#a3be8c").render("[x]") : "[ ]"
         text = "#{marker} #{action}"
-        if i == @action_cursor
-          lines << ViewHelpers.selected_style.render("  #{Chamomile::ANSI.strip(text)}  ")
-        else
-          lines << "  #{text}"
-        end
+        lines << if i == @action_cursor
+                   ViewHelpers.selected_style.render("  #{Chamomile::ANSI.strip(text)}  ")
+                 else
+                   "  #{text}"
+                 end
       end
 
       lines << ""
@@ -356,7 +342,6 @@ module LazyRails
         else
           @method_input = +""
         end
-        nil
       when :enter
         if @method_input.strip.empty?
           if @methods.any?
@@ -368,18 +353,16 @@ module LazyRails
           @methods << @method_input.strip
           @method_input = +""
         end
-        nil
       when :backspace
         if @method_input.empty? && @methods.any?
           @methods.pop
         else
           @method_input.chop!
         end
-        nil
       else
         @method_input << key.to_s if key.is_a?(String) && key.length == 1
-        nil
       end
+      nil
     end
 
     def render_methods_step
@@ -399,9 +382,7 @@ module LazyRails
       lines << ""
       hint = @methods.empty? ? "Type a method name and press Enter" : "Enter another method, or Enter with empty to finish"
       lines << Chamomile::Style.new.foreground("#666666").render(hint)
-      if @methods.any?
-        lines << Chamomile::Style.new.foreground("#666666").render("Backspace with empty input to remove last method")
-      end
+      lines << Chamomile::Style.new.foreground("#666666").render("Backspace with empty input to remove last method") if @methods.any?
 
       if @error
         lines << ""
@@ -419,14 +400,12 @@ module LazyRails
         # Go back to previous step
         steps = step_names
         idx = steps.index(:review) || 0
-        @step = idx > 0 ? steps[idx - 1] : :name
+        @step = idx.positive? ? steps[idx - 1] : :name
         @editing_field_name = true if @step == :fields
         nil
       when :enter
         hide
         { action: :run, command: build_command }
-      else
-        nil
       end
     end
 
@@ -459,14 +438,10 @@ module LazyRails
       when "controller"
         lines << "Controller: #{@name}"
         selected = CONTROLLER_ACTIONS.select { |a| @action_toggles[a] }
-        if selected.any?
-          lines << "Actions: #{selected.join(', ')}"
-        end
+        lines << "Actions: #{selected.join(', ')}" if selected.any?
       when "mailer"
         lines << "Mailer: #{@name}"
-        if @methods.any?
-          lines << "Methods: #{@methods.join(', ')}"
-        end
+        lines << "Methods: #{@methods.join(', ')}" if @methods.any?
       else
         lines << "Name: #{@name}"
       end

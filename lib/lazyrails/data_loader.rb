@@ -94,7 +94,7 @@ module LazyRails
             TableRowsLoadedEvent.new(table: table_name, columns: [], rows: [], total: 0, error: data["error"])
           else
             TableRowsLoadedEvent.new(table: table_name, columns: data["columns"], rows: data["rows"],
-                                   total: data["total"] || 0, error: nil)
+                                     total: data["total"] || 0, error: nil)
           end
         else
           TableRowsLoadedEvent.new(table: table_name, columns: [], rows: [], total: 0, error: result.stderr)
@@ -190,11 +190,11 @@ module LazyRails
           MailerPreviewLoadedEvent.new(preview: preview, error: nil, **data)
         else
           MailerPreviewLoadedEvent.new(preview: preview, subject: nil, to: nil,
-                                     from: nil, body: nil, error: result.stderr)
+                                       from: nil, body: nil, error: result.stderr)
         end
       rescue StandardError => e
         MailerPreviewLoadedEvent.new(preview: preview, subject: nil, to: nil,
-                                   from: nil, body: nil, error: e.message)
+                                     from: nil, body: nil, error: e.message)
       end)
     end
 

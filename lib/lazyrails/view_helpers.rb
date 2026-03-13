@@ -40,7 +40,7 @@ module LazyRails
         row = start_row + i
         break if row >= base_lines.size
 
-        if start_col == 0
+        if start_col.zero?
           base_lines[row] = box_line
         else
           left_pad = " " * start_col

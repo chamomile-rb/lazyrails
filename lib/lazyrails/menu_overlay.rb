@@ -78,11 +78,11 @@ module LazyRails
       footer = "j/k navigate | Enter select | Esc close"
 
       box = Chamomile::Style.new
-                           .width(menu_width)
-                           .border(Chamomile::Border::ROUNDED)
-                           .border_foreground("#b48ead")
-                           .padding(0, 1)
-                           .render("#{content}\n\n#{footer}")
+                            .width(menu_width)
+                            .border(Chamomile::Border::ROUNDED)
+                            .border_foreground("#b48ead")
+                            .padding(0, 1)
+                            .render("#{content}\n\n#{footer}")
 
       # Inject title into top border
       box_lines = box.lines

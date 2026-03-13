@@ -91,11 +91,11 @@ module LazyRails
       footer = "Enter continue | ! don't show again | #{scroll_hint}".strip
 
       box = Chamomile::Style.new
-                           .width(box_width)
-                           .border(Chamomile::Border::ROUNDED)
-                           .border_foreground("#b48ead")
-                           .padding(0, 1)
-                           .render("#{content}\n\n#{footer}")
+                            .width(box_width)
+                            .border(Chamomile::Border::ROUNDED)
+                            .border_foreground("#b48ead")
+                            .padding(0, 1)
+                            .render("#{content}\n\n#{footer}")
 
       box_lines = box.lines
       if box_lines.any?

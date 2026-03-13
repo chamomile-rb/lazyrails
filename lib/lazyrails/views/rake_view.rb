@@ -12,7 +12,7 @@ module LazyRails
           desc_width = [width - name_text.length - 3, 0].max
           dimmed_desc = if desc_width.positive?
                           Chamomile::Style.new.foreground("#666666").render(ViewHelpers.truncate(desc,
-                                                                                                desc_width))
+                                                                                                 desc_width))
                         else
                           ""
                         end

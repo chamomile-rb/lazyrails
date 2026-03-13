@@ -108,11 +108,11 @@ module LazyRails
       footer = "? or Esc close#{scroll_hint}"
 
       box = Chamomile::Style.new
-                           .width(box_width)
-                           .border(Chamomile::Border::ROUNDED)
-                           .border_foreground("#b48ead")
-                           .padding(0, 1)
-                           .render("#{content}\n\n#{footer}")
+                            .width(box_width)
+                            .border(Chamomile::Border::ROUNDED)
+                            .border_foreground("#b48ead")
+                            .padding(0, 1)
+                            .render("#{content}\n\n#{footer}")
 
       box_lines = box.lines
       if box_lines.any?
@@ -129,7 +129,7 @@ module LazyRails
     def build_lines
       lines = []
       SECTIONS.each_with_index do |section, i|
-        lines << "" if i > 0
+        lines << "" if i.positive?
         lines << Chamomile::Style.new.bold.foreground("#b48ead").render(section[:section])
         section[:bindings].each do |key, desc|
           key_styled = Chamomile::Style.new.bold.render(key.ljust(18))
