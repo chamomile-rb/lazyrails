@@ -77,9 +77,9 @@ module LazyRails
       content = lines.join("\n")
       footer = "j/k navigate | Enter select | Esc close"
 
-      box = Flourish::Style.new
+      box = Chamomile::Style.new
                            .width(menu_width)
-                           .border(Flourish::Border::ROUNDED)
+                           .border(Chamomile::Border::ROUNDED)
                            .border_foreground("#b48ead")
                            .padding(0, 1)
                            .render("#{content}\n\n#{footer}")
@@ -88,7 +88,7 @@ module LazyRails
       box_lines = box.lines
       if box_lines.any?
         title_text = " #{@title} "
-        title_styled = Flourish::Style.new.foreground("#b48ead").bold.render(title_text)
+        title_styled = Chamomile::Style.new.foreground("#b48ead").bold.render(title_text)
         box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
       end
 

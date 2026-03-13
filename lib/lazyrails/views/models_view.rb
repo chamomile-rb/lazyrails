@@ -46,7 +46,7 @@ module LazyRails
             color = ARROW_COLORS[color_key] || "#999999"
 
             arrow_text = "#{macro_label} \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2192 #{a.class_name}"
-            styled_arrow = Flourish::Style.new.foreground(color).render(arrow_text)
+            styled_arrow = Chamomile::Style.new.foreground(color).render(arrow_text)
             lines << " #{connector}\u2500\u2500 #{styled_arrow}"
           end
           lines << ""

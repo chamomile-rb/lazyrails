@@ -4,7 +4,7 @@ A [lazygit](https://github.com/jesseduffield/lazygit)-style terminal UI for Rail
 
 ![Lazyrails overview](docs/overview.gif)
 
-Built with [Chamomile](https://github.com/xjackk/chamomile) (chamomile + petals + flourish).
+Built with [Chamomile](https://github.com/chamomile-rb/chamomile) — the complete Ruby TUI framework.
 
 ## Install
 

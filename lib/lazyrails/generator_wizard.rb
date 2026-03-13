@@ -85,9 +85,9 @@ module LazyRails
       step_label = step_indicator
       footer = render_footer
 
-      box = Flourish::Style.new
+      box = Chamomile::Style.new
                            .width(menu_width)
-                           .border(Flourish::Border::ROUNDED)
+                           .border(Chamomile::Border::ROUNDED)
                            .border_foreground("#b48ead")
                            .padding(0, 1)
                            .render("#{content}\n\n#{footer}")
@@ -95,7 +95,7 @@ module LazyRails
       box_lines = box.lines
       if box_lines.any?
         title_text = " Generate #{@gen_label} #{step_label} "
-        title_styled = Flourish::Style.new.foreground("#b48ead").bold.render(title_text)
+        title_styled = Chamomile::Style.new.foreground("#b48ead").bold.render(title_text)
         box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
       end
 
@@ -159,14 +159,14 @@ module LazyRails
       lines << ""
 
       prompt = "> #{@name}\u2588"
-      lines << Flourish::Style.new.bold.render(prompt)
+      lines << Chamomile::Style.new.bold.render(prompt)
 
       lines << ""
-      lines << Flourish::Style.new.foreground("#666666").render(name_hint)
+      lines << Chamomile::Style.new.foreground("#666666").render(name_hint)
 
       if @error
         lines << ""
-        lines << Flourish::Style.new.foreground("#ff6347").render(@error)
+        lines << Chamomile::Style.new.foreground("#ff6347").render(@error)
       end
 
       lines.join("\n")
@@ -260,7 +260,7 @@ module LazyRails
       # Show existing fields
       if @fields.any?
         @fields.each_with_index do |f, i|
-          marker = Flourish::Style.new.foreground("#a3be8c").render("\u2713")
+          marker = Chamomile::Style.new.foreground("#a3be8c").render("\u2713")
           lines << "  #{marker} #{f[:name]}:#{f[:type]}"
         end
         lines << ""
@@ -270,9 +270,9 @@ module LazyRails
         lines << "Field name: #{@field_name_input}\u2588"
         lines << ""
         hint = @fields.empty? ? "Type a field name, then press Enter to pick its type" : "Type a field name, Enter to pick type, Enter with empty to finish"
-        lines << Flourish::Style.new.foreground("#666666").render(hint)
+        lines << Chamomile::Style.new.foreground("#666666").render(hint)
         if @fields.any?
-          lines << Flourish::Style.new.foreground("#666666").render("Backspace with empty input to remove last field")
+          lines << Chamomile::Style.new.foreground("#666666").render("Backspace with empty input to remove last field")
         end
       else
         lines << "Pick type for '#{@field_name_input}':"
@@ -288,7 +288,7 @@ module LazyRails
 
       if @error
         lines << ""
-        lines << Flourish::Style.new.foreground("#ff6347").render(@error)
+        lines << Chamomile::Style.new.foreground("#ff6347").render(@error)
       end
 
       lines.join("\n")
@@ -331,17 +331,17 @@ module LazyRails
 
       CONTROLLER_ACTIONS.each_with_index do |action, i|
         checked = @action_toggles[action]
-        marker = checked ? Flourish::Style.new.foreground("#a3be8c").render("[x]") : "[ ]"
+        marker = checked ? Chamomile::Style.new.foreground("#a3be8c").render("[x]") : "[ ]"
         text = "#{marker} #{action}"
         if i == @action_cursor
-          lines << ViewHelpers.selected_style.render("  #{Flourish::ANSI.strip(text)}  ")
+          lines << ViewHelpers.selected_style.render("  #{Chamomile::ANSI.strip(text)}  ")
         else
           lines << "  #{text}"
         end
       end
 
       lines << ""
-      lines << Flourish::Style.new.foreground("#666666").render("Space toggle | a toggle all | Enter continue")
+      lines << Chamomile::Style.new.foreground("#666666").render("Space toggle | a toggle all | Enter continue")
 
       lines.join("\n")
     end
@@ -389,7 +389,7 @@ module LazyRails
 
       if @methods.any?
         @methods.each do |m|
-          marker = Flourish::Style.new.foreground("#a3be8c").render("\u2713")
+          marker = Chamomile::Style.new.foreground("#a3be8c").render("\u2713")
           lines << "  #{marker} #{m}"
         end
         lines << ""
@@ -398,14 +398,14 @@ module LazyRails
       lines << "Method name: #{@method_input}\u2588"
       lines << ""
       hint = @methods.empty? ? "Type a method name and press Enter" : "Enter another method, or Enter with empty to finish"
-      lines << Flourish::Style.new.foreground("#666666").render(hint)
+      lines << Chamomile::Style.new.foreground("#666666").render(hint)
       if @methods.any?
-        lines << Flourish::Style.new.foreground("#666666").render("Backspace with empty input to remove last method")
+        lines << Chamomile::Style.new.foreground("#666666").render("Backspace with empty input to remove last method")
       end
 
       if @error
         lines << ""
-        lines << Flourish::Style.new.foreground("#ff6347").render(@error)
+        lines << Chamomile::Style.new.foreground("#ff6347").render(@error)
       end
 
       lines.join("\n")
@@ -435,11 +435,11 @@ module LazyRails
       cmd_str = cmd.join(" ")
 
       lines = []
-      lines << Flourish::Style.new.foreground("#a3be8c").bold.render("Ready to generate!")
+      lines << Chamomile::Style.new.foreground("#a3be8c").bold.render("Ready to generate!")
       lines << ""
 
       lines << "Command:"
-      lines << Flourish::Style.new.bold.render("  $ #{cmd_str}")
+      lines << Chamomile::Style.new.bold.render("  $ #{cmd_str}")
       lines << ""
 
       # Summary

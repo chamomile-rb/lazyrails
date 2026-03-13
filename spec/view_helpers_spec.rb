@@ -54,11 +54,11 @@ RSpec.describe LazyRails::ViewHelpers do
       lines = result.split("\n")
 
       # Base lines visible above and below the popup
-      expect(Flourish::ANSI.strip(lines[0])).to include("Base line 1")
-      expect(Flourish::ANSI.strip(lines[9])).to include("Base line 10")
+      expect(Chamomile::ANSI.strip(lines[0])).to include("Base line 1")
+      expect(Chamomile::ANSI.strip(lines[9])).to include("Base line 10")
 
       # Popup lines centered in the middle
-      popup_rows = lines.select { |l| Flourish::ANSI.strip(l).include?("Hi!!") }
+      popup_rows = lines.select { |l| Chamomile::ANSI.strip(l).include?("Hi!!") }
       expect(popup_rows.size).to eq(1)
     end
 
@@ -94,10 +94,10 @@ RSpec.describe LazyRails::ViewHelpers do
     end
 
     it "works with ANSI-styled popup content" do
-      styled = Flourish::Style.new.bold.render("Bold")
+      styled = Chamomile::Style.new.bold.render("Bold")
       result = described_class.overlay("aaa\nbbb\nccc", styled, 20, 3)
       expect(result).to include("\e[1m")
-      expect(Flourish::ANSI.strip(result)).to include("Bold")
+      expect(Chamomile::ANSI.strip(result)).to include("Bold")
     end
   end
 end

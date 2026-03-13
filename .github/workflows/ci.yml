@@ -15,19 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Check out dependencies (not yet published to RubyGems)
+      # Check out chamomile (not yet published to RubyGems)
       - uses: actions/checkout@v4
         with:
           repository: xjackk/chamomile
           path: chamomile
-      - uses: actions/checkout@v4
-        with:
-          repository: xjackk/Petals
-          path: petals
-      - uses: actions/checkout@v4
-        with:
-          repository: xjackk/flourish
-          path: flourish
 
       - uses: ruby/setup-ruby@v1
         with:
@@ -44,14 +36,6 @@ jobs:
         with:
           repository: xjackk/chamomile
           path: chamomile
-      - uses: actions/checkout@v4
-        with:
-          repository: xjackk/Petals
-          path: petals
-      - uses: actions/checkout@v4
-        with:
-          repository: xjackk/flourish
-          path: flourish
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"

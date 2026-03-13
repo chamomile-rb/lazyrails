@@ -11,7 +11,7 @@ module LazyRails
         if selected
           ViewHelpers.selected_style.render(text.ljust(width))
         else
-          icon = Flourish::Style.new.foreground(color).render(arrow)
+          icon = Chamomile::Style.new.foreground(color).render(arrow)
           "#{icon} #{migration.version}  #{ViewHelpers.truncate(migration.name, width - 22)}"
         end
       end
@@ -65,7 +65,7 @@ module LazyRails
 
         diffs.each do |d|
           color = d.op == :add ? "#04b575" : "#ff6347"
-          lines << Flourish::Style.new.foreground(color).render(d.to_s)
+          lines << Chamomile::Style.new.foreground(color).render(d.to_s)
         end
 
         lines << ""

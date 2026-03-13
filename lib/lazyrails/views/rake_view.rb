@@ -11,7 +11,7 @@ module LazyRails
         else
           desc_width = [width - name_text.length - 3, 0].max
           dimmed_desc = if desc_width.positive?
-                          Flourish::Style.new.foreground("#666666").render(ViewHelpers.truncate(desc,
+                          Chamomile::Style.new.foreground("#666666").render(ViewHelpers.truncate(desc,
                                                                                                 desc_width))
                         else
                           ""

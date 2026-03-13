@@ -29,7 +29,7 @@ module LazyRails
         if selected
           ViewHelpers.selected_style.render(text.ljust(width))
         else
-          Flourish::Style.new.foreground(color).render(text)
+          Chamomile::Style.new.foreground(color).render(text)
         end
       end
 
@@ -49,7 +49,7 @@ module LazyRails
             dur = sql[:duration_ms]
             color = dur.to_f > 100 ? "#ff6347" : "#5b9bd5"
             query_text = "  #{sql[:query]} (#{dur}ms)"
-            lines << Flourish::Style.new.foreground(color).render(query_text)
+            lines << Chamomile::Style.new.foreground(color).render(query_text)
           end
           lines << ""
         end

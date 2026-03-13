@@ -22,7 +22,5 @@ Gem::Specification.new do |spec|
   spec.bindir = "bin"
   spec.executables = ["lazyrails"]
 
-  spec.add_dependency "chamomile", "~> 0.2"
-  spec.add_dependency "chamomile-flourish", "~> 0.2"
-  spec.add_dependency "chamomile-petals", "~> 0.2"
+  spec.add_dependency "chamomile", "~> 1.0"
 end

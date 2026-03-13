@@ -107,9 +107,9 @@ module LazyRails
       scroll_hint = @scroll < max_scroll ? " | j/k scroll" : ""
       footer = "? or Esc close#{scroll_hint}"
 
-      box = Flourish::Style.new
+      box = Chamomile::Style.new
                            .width(box_width)
-                           .border(Flourish::Border::ROUNDED)
+                           .border(Chamomile::Border::ROUNDED)
                            .border_foreground("#b48ead")
                            .padding(0, 1)
                            .render("#{content}\n\n#{footer}")
@@ -117,7 +117,7 @@ module LazyRails
       box_lines = box.lines
       if box_lines.any?
         title_text = " Keybindings "
-        title_styled = Flourish::Style.new.foreground("#b48ead").bold.render(title_text)
+        title_styled = Chamomile::Style.new.foreground("#b48ead").bold.render(title_text)
         box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
       end
 
@@ -130,9 +130,9 @@ module LazyRails
       lines = []
       SECTIONS.each_with_index do |section, i|
         lines << "" if i > 0
-        lines << Flourish::Style.new.bold.foreground("#b48ead").render(section[:section])
+        lines << Chamomile::Style.new.bold.foreground("#b48ead").render(section[:section])
         section[:bindings].each do |key, desc|
-          key_styled = Flourish::Style.new.bold.render(key.ljust(18))
+          key_styled = Chamomile::Style.new.bold.render(key.ljust(18))
           lines << "  #{key_styled} #{desc}"
         end
       end

@@ -10,7 +10,7 @@ module LazyRails
           ViewHelpers.selected_style.render(text.ljust(width))
         else
           color = credential_file.exists ? "#04b575" : "#666666"
-          Flourish::Style.new.foreground(color).render(text)
+          Chamomile::Style.new.foreground(color).render(text)
         end
       end
 
@@ -34,7 +34,7 @@ module LazyRails
         lines << ""
         lines << content
         lines << ""
-        warn_style = Flourish::Style.new.foreground("#e5c07b")
+        warn_style = Chamomile::Style.new.foreground("#e5c07b")
         lines << warn_style.render("\u26a0  Sensitive \u2014 press Escape to clear")
         lines.join("\n")
       end

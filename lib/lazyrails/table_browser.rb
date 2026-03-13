@@ -71,7 +71,7 @@ module LazyRails
         row.map { |v| v.nil? ? "NULL" : v.to_s }
       end
 
-      @table_widget = Petals::Table.new(rows: table_rows) do |t|
+      @table_widget = Chamomile::Table.new(rows: table_rows) do |t|
         columns.each { |col| t.column col, width: column_width(col, columns.size) }
       end
     end
@@ -199,7 +199,7 @@ module LazyRails
     end
 
     def render_table_list(width, height)
-      header = Flourish::Style.new.bold.render("Select a Table (#{@tables.size})")
+      header = Chamomile::Style.new.bold.render("Select a Table (#{@tables.size})")
       lines = [header, ""]
 
       if @tables.empty?
@@ -226,7 +226,7 @@ module LazyRails
     end
 
     def render_row_data(_width, height)
-      header = Flourish::Style.new.bold.render("Table: #{@selected_table}")
+      header = Chamomile::Style.new.bold.render("Table: #{@selected_table}")
       lines = [header, ""]
 
       # Status line with query info
@@ -235,13 +235,13 @@ module LazyRails
       status_parts << "ORDER BY #{order_expression}" if @order_column
       status_parts << "Page #{@page + 1}/#{total_pages} (#{@total_rows} rows)"
       status_line = status_parts.join(" | ")
-      lines << Flourish::Style.new.foreground("#888888").render(status_line)
+      lines << Chamomile::Style.new.foreground("#888888").render(status_line)
       lines << ""
 
       if @loading
         lines << "Loading..."
       elsif @error
-        lines << Flourish::Style.new.foreground("#ff6347").render("Error: #{@error}")
+        lines << Chamomile::Style.new.foreground("#ff6347").render("Error: #{@error}")
       elsif @table_widget
         @table_widget.height = [height - 7, 3].max
         lines << @table_widget.view

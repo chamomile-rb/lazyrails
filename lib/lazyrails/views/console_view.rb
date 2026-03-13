@@ -10,7 +10,7 @@ module LazyRails
         if selected
           ViewHelpers.selected_style.render(text.ljust(width))
         else
-          Flourish::Style.new.foreground(color).render(text)
+          Chamomile::Style.new.foreground(color).render(text)
         end
       end
 
@@ -22,7 +22,7 @@ module LazyRails
         lines << if entry.success?
                    "=> #{entry.result}"
                  else
-                   Flourish::Style.new.foreground("#ff6347").render("Error: #{entry.error}")
+                   Chamomile::Style.new.foreground("#ff6347").render("Error: #{entry.error}")
                  end
 
         lines << ""

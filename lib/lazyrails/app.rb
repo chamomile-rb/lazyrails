@@ -59,7 +59,7 @@ module LazyRails
       @command_log = CommandLog.new
       @server = ServerManager.new(project)
       @log_watcher = LogWatcher.new(project)
-      @detail_viewport = Petals::Viewport.new(width: 40, height: 20)
+      @detail_viewport = Chamomile::Viewport.new(width: 40, height: 20)
 
       # Component objects
       @flash = Flash.new
@@ -163,7 +163,7 @@ module LazyRails
       left_content = render_left_panels(left_width)
       right_content = render_right_pane(right_width)
 
-      layout = Flourish.horizontal([left_content, " ", right_content], align: :top)
+      layout = Chamomile.horizontal([left_content, " ", right_content], align: :top)
 
       base = if @input_mode.active?
                "#{layout}\n#{render_filter_bar}"

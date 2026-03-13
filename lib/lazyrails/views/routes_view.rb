@@ -18,7 +18,7 @@ module LazyRails
         if selected
           ViewHelpers.selected_style.render("#{verb} #{path}".ljust(width))
         else
-          styled_verb = Flourish::Style.new.foreground(VERB_COLORS[route.verb] || "#999999").render(verb)
+          styled_verb = Chamomile::Style.new.foreground(VERB_COLORS[route.verb] || "#999999").render(verb)
           "#{styled_verb} #{path}"
         end
       end

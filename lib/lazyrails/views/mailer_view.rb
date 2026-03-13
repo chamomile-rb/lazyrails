@@ -31,7 +31,7 @@ module LazyRails
         lines << ""
 
         if content[:error]
-          lines << Flourish::Style.new.foreground("#ff6347").render("Error: #{content[:error]}")
+          lines << Chamomile::Style.new.foreground("#ff6347").render("Error: #{content[:error]}")
           return lines.join("\n")
         end
 

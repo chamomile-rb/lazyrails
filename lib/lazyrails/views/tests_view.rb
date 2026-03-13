@@ -14,7 +14,7 @@ module LazyRails
                   when :failed then "#ff6347"
                   else "#999999"
                   end
-          Flourish::Style.new.foreground(color).render(text)
+          Chamomile::Style.new.foreground(color).render(text)
         end
       end
 

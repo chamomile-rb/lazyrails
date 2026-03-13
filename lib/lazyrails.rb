@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 require "chamomile"
-require "petals"
-require "flourish"
 require "json"
 require "open3"
 

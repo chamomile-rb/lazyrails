@@ -19,18 +19,18 @@ module LazyRails
           if i == selected
             lines << ViewHelpers.selected_style.render(text)
           else
-            styled_icon = Flourish::Style.new.foreground(color).render(icon)
+            styled_icon = Chamomile::Style.new.foreground(color).render(icon)
             lines << "#{styled_icon} #{cmd_text.ljust(width - 12)} #{duration}"
           end
 
           if entry.annotation
             annotation_line = "  \u21b3 #{entry.annotation}"
-            lines << Flourish::Style.new.foreground(DIM).render(annotation_line)
+            lines << Chamomile::Style.new.foreground(DIM).render(annotation_line)
           end
 
           if entry.undo_command
             undo_line = "  \u21b3 Undo: #{entry.undo_command.join(' ')}"
-            lines << Flourish::Style.new.foreground(DIM).render(undo_line)
+            lines << Chamomile::Style.new.foreground(DIM).render(undo_line)
           end
 
           lines.join("\n")

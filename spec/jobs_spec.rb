@@ -157,7 +157,7 @@ RSpec.describe "Jobs structs and views" do
     describe ".render_item" do
       it "renders ready job with circle icon" do
         output = described_class.render_item(ready_job, selected: false, width: 60)
-        stripped = Flourish::ANSI.strip(output)
+        stripped = Chamomile::ANSI.strip(output)
         expect(stripped).to include("\u25CB") # ○
         expect(stripped).to include("ProcessPaymentJob")
         expect(stripped).to include("default")
@@ -165,14 +165,14 @@ RSpec.describe "Jobs structs and views" do
 
       it "renders failed job with X icon" do
         output = described_class.render_item(failed_job, selected: false, width: 60)
-        stripped = Flourish::ANSI.strip(output)
+        stripped = Chamomile::ANSI.strip(output)
         expect(stripped).to include("\u2717") # ✗
         expect(stripped).to include("SendEmailJob")
       end
 
       it "renders finished job with check icon" do
         output = described_class.render_item(finished_job, selected: false, width: 60)
-        stripped = Flourish::ANSI.strip(output)
+        stripped = Chamomile::ANSI.strip(output)
         expect(stripped).to include("\u2713") # ✓
         expect(stripped).to include("DoneJob")
       end
@@ -250,7 +250,7 @@ RSpec.describe "Jobs structs and views" do
 
       it "does not show error section for non-failed jobs" do
         output = described_class.render_detail(ready_job, width: 60)
-        stripped = Flourish::ANSI.strip(output)
+        stripped = Chamomile::ANSI.strip(output)
         expect(stripped).not_to include("Error")
       end
 

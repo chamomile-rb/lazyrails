@@ -50,7 +50,7 @@ module LazyRails
       @active = true
       @purpose = purpose
       @label = prompt
-      @input = Petals::TextInput.new(prompt: "", placeholder: placeholder)
+      @input = Chamomile::TextInput.new(prompt: "", placeholder: placeholder)
       @input.focus
     end
   end

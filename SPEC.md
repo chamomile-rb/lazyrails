@@ -1,6 +1,6 @@
 # LazyRails — Specification
 
-A lazygit-style terminal UI for the Rails command line. Built on the Chamomile ecosystem (chamomile + petals + flourish).
+A lazygit-style terminal UI for the Rails command line. Built on Chamomile.
 
 ## Overview
 
@@ -11,9 +11,7 @@ Every command we run is logged transparently so users learn the CLI as they use 
 ## Dependencies
 
 ```ruby
-spec.add_dependency "chamomile", "~> 0.1"
-spec.add_dependency "petals",    "~> 0.1"
-spec.add_dependency "flourish",  "~> 0.1"
+spec.add_dependency "chamomile", "~> 1.0"
 ```
 
 Runtime requirement: a Rails project directory (detected via `bin/rails`, or `Gemfile` with `rails` gem).
@@ -674,23 +672,23 @@ CommandEntry = Data.define(:command, :exit_code, :duration_ms, :timestamp, :stdo
 
 ---
 
-## UI Components (from Petals)
+## UI Components (from Chamomile)
 
 | Component | Usage |
 |-----------|-------|
-| `Petals::Viewport` | Detail pane, server log, test output, command log |
-| `Petals::TextInput` | Filter input, port input, migration name, model name |
-| `Petals::Spinner` | Loading indicators (routes loading, command running) |
-| `Petals::Help` | `?` help overlay with all keybindings |
-| `Petals::Table` | Routes display, gems display, stats display |
-| `Petals::List` | Model list, test file list (with fuzzy filter) |
-| `Petals::KeyBinding` | All keybinding matching |
+| `Chamomile::Viewport` | Detail pane, server log, test output, command log |
+| `Chamomile::TextInput` | Filter input, port input, migration name, model name |
+| `Chamomile::Spinner` | Loading indicators (routes loading, command running) |
+| `Chamomile::Help` | `?` help overlay with all keybindings |
+| `Chamomile::Table` | Routes display, gems display, stats display |
+| `Chamomile::List` | Model list, test file list (with fuzzy filter) |
+| `Chamomile::KeyBinding` | All keybinding matching |
 
-## Styling (from Flourish)
+## Styling (from Chamomile)
 
-- Panel borders: `Flourish::Border::ROUNDED`
+- Panel borders: `Chamomile::Border::ROUNDED`
 - Focused panel: `#7d56f4`, unfocused: `#444444`
-- Layout: `Flourish.horizontal` / `Flourish.vertical`
+- Layout: `Chamomile.horizontal` / `Chamomile.vertical`
 - Status bar: dim foreground
 - Verb colors: GET=`#04b575`, POST=`#5b9bd5`, PUT/PATCH=`#e5c07b`, DELETE=`#ff6347`
 - Migration status: up=`#04b575`, down=`#ff6347`

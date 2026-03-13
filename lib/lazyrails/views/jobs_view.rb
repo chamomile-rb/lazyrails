@@ -30,13 +30,13 @@ module LazyRails
           ViewHelpers.selected_style.render(text.ljust(width))
         else
           color = STATUS_COLORS.fetch(job.status, "#cccccc")
-          Flourish::Style.new.foreground(color).render(text)
+          Chamomile::Style.new.foreground(color).render(text)
         end
       end
 
       def self.render_detail(job, width:)
         lines = []
-        lines << Flourish::Style.new.bold.render(job.class_name)
+        lines << Chamomile::Style.new.bold.render(job.class_name)
         lines << ""
 
         lines << "ID:           #{job.id}"
@@ -64,7 +64,7 @@ module LazyRails
         # Arguments
         if job.arguments && !job.arguments.to_s.empty?
           lines << ""
-          lines << Flourish::Style.new.bold.render("Arguments")
+          lines << Chamomile::Style.new.bold.render("Arguments")
           begin
             parsed = job.arguments.is_a?(String) ? JSON.parse(job.arguments) : job.arguments
             lines << JSON.pretty_generate(parsed)
@@ -76,13 +76,13 @@ module LazyRails
         # Error details for failed jobs
         if job.status == "failed"
           lines << ""
-          lines << Flourish::Style.new.foreground("#ff6347").bold.render("Error")
+          lines << Chamomile::Style.new.foreground("#ff6347").bold.render("Error")
           lines << "#{job.error_class}: #{job.error_message}"
 
           if job.backtrace.is_a?(Array) && !job.backtrace.empty?
             lines << ""
-            lines << Flourish::Style.new.bold.render("Backtrace")
-            bt_style = Flourish::Style.new.foreground("#666666")
+            lines << Chamomile::Style.new.bold.render("Backtrace")
+            bt_style = Chamomile::Style.new.foreground("#666666")
             job.backtrace.first(20).each do |bt_line|
               lines << bt_style.render("  #{bt_line}")
             end

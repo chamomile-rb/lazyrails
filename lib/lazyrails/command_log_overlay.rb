@@ -49,14 +49,14 @@ module LazyRails
     def render(width:)
       return "No commands executed yet.\n\nPress L or Esc to close." if @command_log.empty?
 
-      header = Flourish::Style.new.bold.render("Command Log")
+      header = Chamomile::Style.new.bold.render("Command Log")
       list = Views::CommandLogView.render(@command_log, width: width - 4, selected: @cursor)
 
       parts = [header, "", list]
 
       if @detail
         parts << ""
-        parts << Flourish::Style.new.bold.render("Detail")
+        parts << Chamomile::Style.new.bold.render("Detail")
         parts << Views::CommandLogView.render_detail(@detail, width: width - 4)
       end
 

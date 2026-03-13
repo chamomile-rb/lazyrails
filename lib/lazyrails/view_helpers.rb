@@ -9,7 +9,7 @@ module LazyRails
     end
 
     def self.selected_style
-      Flourish::Style.new.bold.reverse
+      Chamomile::Style.new.bold.reverse
     end
 
     def self.classify_name(name)
@@ -24,10 +24,10 @@ module LazyRails
       box_lines = popup_box.split("\n", -1)
 
       # Remove trailing empty lines from box
-      box_lines.pop while box_lines.last&.then { |l| Flourish::ANSI.strip(l).strip.empty? }
+      box_lines.pop while box_lines.last&.then { |l| Chamomile::ANSI.strip(l).strip.empty? }
 
       box_h = box_lines.size
-      box_w = box_lines.map { |l| Flourish::ANSI.printable_width(l) }.max || 0
+      box_w = box_lines.map { |l| Chamomile::ANSI.printable_width(l) }.max || 0
 
       # Center position
       start_row = [(screen_height - box_h) / 2, 0].max
@@ -52,9 +52,9 @@ module LazyRails
     end
 
     # Injects a styled title into the first line of a bordered box.
-    # Used by Renderer and MenuOverlay to add titles to Flourish borders.
+    # Used by Renderer and MenuOverlay to add titles to Chamomile borders.
     def self.inject_title(top_line, styled_title, title_visible_len)
-      stripped = Flourish::ANSI.strip(top_line)
+      stripped = Chamomile::ANSI.strip(top_line)
       return top_line if stripped.length <= title_visible_len + 2
 
       ansi_prefix = top_line[/\A((?:\e\[[0-9;]*m)*)/] || ""

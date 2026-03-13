@@ -25,17 +25,17 @@ module LazyRails
         content = render_panel_content(panel, width: width - 4, height: h - 2, focused: focused)
 
         border_color = focused ? FOCUSED_COLOR : UNFOCUSED_COLOR
-        box = Flourish::Style.new
+        box = Chamomile::Style.new
                              .width(width)
                              .height(h)
-                             .border(Flourish::Border::ROUNDED)
+                             .border(Chamomile::Border::ROUNDED)
                              .border_foreground(border_color)
                              .render(content)
 
         box_lines = box.lines
         if box_lines.any?
           title = " #{panel.title} "
-          title_styled = Flourish::Style.new.foreground(border_color).bold.render(title)
+          title_styled = Chamomile::Style.new.foreground(border_color).bold.render(title)
           box_lines[0] = inject_title(box_lines[0], title_styled, title.length)
         end
 
@@ -44,7 +44,7 @@ module LazyRails
         sections << output
       end
 
-      Flourish.vertical(sections, align: :left)
+      Chamomile.vertical(sections, align: :left)
     end
 
     def panel_cache_key(panel, focused, width, height)
@@ -104,7 +104,7 @@ module LazyRails
         when :jobs     then Views::JobsView.render_item(item, selected: selected, width: width)
         when :custom   then Views::CustomCommandsView.render_item(item, selected: selected, width: width)
         else
-          selected ? Flourish::Style.new.reverse.render(item.to_s) : item.to_s
+          selected ? Chamomile::Style.new.reverse.render(item.to_s) : item.to_s
         end
       end.join("\n")
     end
@@ -117,17 +117,17 @@ module LazyRails
       content = @detail_viewport.view
       border_color = UNFOCUSED_COLOR
 
-      box = Flourish::Style.new
+      box = Chamomile::Style.new
                            .width(width)
                            .height(@height - 2)
-                           .border(Flourish::Border::ROUNDED)
+                           .border(Chamomile::Border::ROUNDED)
                            .border_foreground(border_color)
                            .render(content)
 
       box_lines = box.lines
       if box_lines.any?
         title = " Detail "
-        title_styled = Flourish::Style.new.foreground(border_color).bold.render(title)
+        title_styled = Chamomile::Style.new.foreground(border_color).bold.render(title)
         box_lines[0] = inject_title(box_lines[0], title_styled, title.length)
       end
 
@@ -194,7 +194,7 @@ module LazyRails
 
     def render_status_bar
       if @flash.active?
-        return Flourish::Style.new.foreground("#e5c07b").width(@width).render("  #{@flash.message}".slice(0, @width))
+        return Chamomile::Style.new.foreground("#e5c07b").width(@width).render("  #{@flash.message}".slice(0, @width))
       end
 
       hints = [
@@ -202,27 +202,27 @@ module LazyRails
         ["x", "actions"], ["L", "log"], ["?", "help"], ["q", "quit"]
       ]
       bar = " " + hints.map do |key, desc|
-        styled_key = Flourish::Style.new.bold.foreground("#b48ead").render(key)
+        styled_key = Chamomile::Style.new.bold.foreground("#b48ead").render(key)
         "#{styled_key} #{desc}"
       end.join(" \u2502 ")
 
-      Flourish::Style.new.foreground("#999999").width(@width).render(bar)
+      Chamomile::Style.new.foreground("#999999").width(@width).render(bar)
     end
 
     def render_filter_bar
-      label = Flourish::Style.new.bold.foreground("#b48ead").render(" #{@input_mode.styled_label}")
+      label = Chamomile::Style.new.bold.foreground("#b48ead").render(" #{@input_mode.styled_label}")
       input = @input_mode.view
-      hints = Flourish::Style.new.foreground("#666666").render("Enter submit \u2502 Esc cancel ")
+      hints = Chamomile::Style.new.foreground("#666666").render("Enter submit \u2502 Esc cancel ")
 
       hints_len = "Enter submit | Esc cancel ".length
       label_len = @input_mode.styled_label.length + 1
       input_area = @width - label_len - hints_len
 
       # Build: [label][input padding...][hints]
-      input_visible = Flourish::ANSI.printable_width(input)
+      input_visible = Chamomile::ANSI.printable_width(input)
       padding = input_area > input_visible ? " " * (input_area - input_visible) : ""
 
-      Flourish::Style.new.width(@width).render("#{label}#{input}#{padding}#{hints}")
+      Chamomile::Style.new.width(@width).render("#{label}#{input}#{padding}#{hints}")
     end
 
     def render_confirmation_box
@@ -235,19 +235,19 @@ module LazyRails
       cmd = @confirmation.command.is_a?(Array) ? @confirmation.command.join(" ") : @confirmation.command.to_s
 
       lines = []
-      lines << Flourish::Style.new.foreground(color).bold.render(cmd)
+      lines << Chamomile::Style.new.foreground(color).bold.render(cmd)
       lines << ""
       lines << text
       lines << ""
-      lines << Flourish::Style.new.foreground("#666666").render("Esc cancel")
+      lines << Chamomile::Style.new.foreground("#666666").render("Esc cancel")
       content = lines.join("\n")
 
       box_width = [[cmd.length + 6, text.length + 6].max, @width - 8].min
       box_width = [box_width, 30].max
 
-      box = Flourish::Style.new
+      box = Chamomile::Style.new
                            .width(box_width)
-                           .border(Flourish::Border::ROUNDED)
+                           .border(Chamomile::Border::ROUNDED)
                            .border_foreground(color)
                            .padding(0, 1)
                            .render(content)
@@ -255,7 +255,7 @@ module LazyRails
       box_lines = box.lines
       if box_lines.any?
         title_text = " Confirm "
-        title_styled = Flourish::Style.new.foreground(color).bold.render(title_text)
+        title_styled = Chamomile::Style.new.foreground(color).bold.render(title_text)
         box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
       end
 
@@ -268,10 +268,10 @@ module LazyRails
       box_width = [@width - 4, 60].max
       box_width = [box_width, @width - 2].min
 
-      box = Flourish::Style.new
+      box = Chamomile::Style.new
                            .width(box_width)
                            .height(@height - 4)
-                           .border(Flourish::Border::ROUNDED)
+                           .border(Chamomile::Border::ROUNDED)
                            .border_foreground("#b48ead")
                            .padding(0, 1)
                            .render(content)
@@ -279,7 +279,7 @@ module LazyRails
       box_lines = box.lines
       if box_lines.any?
         title_text = " Command Log "
-        title_styled = Flourish::Style.new.foreground("#b48ead").bold.render(title_text)
+        title_styled = Chamomile::Style.new.foreground("#b48ead").bold.render(title_text)
         box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
       end
 
@@ -292,10 +292,10 @@ module LazyRails
       box_width = [@width - 4, 60].max
       box_width = [box_width, @width - 2].min
 
-      box = Flourish::Style.new
+      box = Chamomile::Style.new
                            .width(box_width)
                            .height(@height - 4)
-                           .border(Flourish::Border::ROUNDED)
+                           .border(Chamomile::Border::ROUNDED)
                            .border_foreground("#b48ead")
                            .padding(0, 1)
                            .render(content)
@@ -303,7 +303,7 @@ module LazyRails
       box_lines = box.lines
       if box_lines.any?
         title_text = " Table Browser "
-        title_styled = Flourish::Style.new.foreground("#b48ead").bold.render(title_text)
+        title_styled = Chamomile::Style.new.foreground("#b48ead").bold.render(title_text)
         box_lines[0] = ViewHelpers.inject_title(box_lines[0], title_styled, title_text.length)
       end
 
