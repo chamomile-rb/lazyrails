@@ -91,6 +91,9 @@ module LazyRails
       @jobs_available = nil
       @jobs_tick_counter = 0
       @pending_job_action = nil
+      @panel_busy = Set.new
+      @last_command_result = {}
+      @force_quit = false
 
       # Caches
       @detail_content = ""
@@ -137,6 +140,7 @@ module LazyRails
       case msg
       when Chamomile::ResizeEvent then handle_resize(msg)
       when Chamomile::KeyEvent        then return handle_key(msg)
+      when Chamomile::MouseEvent      then return handle_mouse(msg)
       when Chamomile::TickEvent       then return handle_tick
       when Chamomile::InterruptEvent  then return shutdown
       when IntrospectLoadedEvent      then return handle_introspect_loaded(msg)
@@ -283,6 +287,13 @@ module LazyRails
     end
 
     def shutdown
+      unless @panel_busy.empty? || @force_quit
+        busy_names = @panel_busy.map { |t| t.to_s.capitalize }.join(", ")
+        @force_quit = true
+        set_flash("#{busy_names} still running. Press q again to quit (tasks will continue in background).")
+        return nil
+      end
+
       @server.stop
       @log_watcher.stop
       quit
@@ -381,6 +392,7 @@ module LazyRails
       if msg.key == :tab && msg.shift?
         clear_panel_state
         @focused_panel = (@focused_panel - 1) % @panels.size
+        @detail_viewport.goto_top
         update_detail_content
         return nil
       end
@@ -392,23 +404,32 @@ module LazyRails
       when :tab, :right, "l"
         clear_panel_state
         @focused_panel = (@focused_panel + 1) % @panels.size
+        @detail_viewport.goto_top
         update_detail_content
       when :left, "h"
         clear_panel_state
         @focused_panel = (@focused_panel - 1) % @panels.size
+        @detail_viewport.goto_top
         update_detail_content
       when "1".."9"
         idx = msg.key.to_i - 1
         if idx < @panels.size
           @focused_panel = idx
+          @detail_viewport.goto_top
           update_detail_content
         end
       when "j", :down
         current_panel.move_cursor(1, panel_visible_height)
+        @detail_viewport.goto_top
         update_detail_content
       when "k", :up
         current_panel.move_cursor(-1, panel_visible_height)
+        @detail_viewport.goto_top
         update_detail_content
+      when "J"
+        @detail_viewport.scroll_down(1)
+      when "K"
+        @detail_viewport.scroll_up(1)
       when :enter then return handle_enter
       when "/"   then start_filter
       when "G"   then show_generator_menu
@@ -419,6 +440,127 @@ module LazyRails
       end
 
       nil
+    end
+
+    # ─── Mouse handling ──────────────────────────────────
+
+    MOUSE_SCROLL_LINES = 3
+
+    def handle_mouse(msg)
+      if @help.visible?
+        handle_help_mouse(msg)
+        return nil
+      end
+
+      if @command_log_overlay.visible?
+        handle_command_log_mouse(msg)
+        return nil
+      end
+
+      # Ignore mouse during modal overlays
+      return nil if @welcome.visible? || @menu.visible? || @confirmation ||
+                    @table_browser.visible? || @generator_wizard.visible? || @input_mode.active?
+
+      # Convert 1-based terminal coordinates to 0-based
+      mx = msg.x - 1
+      my = msg.y - 1
+      left_width = (@width * LEFT_WIDTH_RATIO).to_i
+
+      if mx < left_width
+        handle_left_pane_mouse(msg, my)
+      else
+        handle_right_pane_mouse(msg)
+      end
+
+      nil
+    end
+
+    def handle_left_pane_mouse(msg, my)
+      if msg.wheel?
+        delta = msg.button == Chamomile::MOUSE_WHEEL_DOWN ? 1 : -1
+        current_panel.move_cursor(delta, panel_visible_height)
+        @detail_viewport.goto_top
+        update_detail_content
+      elsif msg.button == Chamomile::MOUSE_LEFT && msg.press?
+        panel_idx = panel_index_at_y(my)
+        return unless panel_idx
+
+        changed = false
+
+        if panel_idx != @focused_panel
+          clear_panel_state
+          @focused_panel = panel_idx
+          changed = true
+        end
+
+        item_idx = item_index_at_y(panel_idx, my)
+        if item_idx && item_idx != current_panel.cursor
+          delta = item_idx - current_panel.cursor
+          current_panel.move_cursor(delta, panel_visible_height)
+          changed = true
+        end
+
+        if changed
+          @detail_viewport.goto_top
+          update_detail_content
+        end
+      end
+    end
+
+    def handle_right_pane_mouse(msg)
+      return unless msg.wheel?
+
+      if msg.button == Chamomile::MOUSE_WHEEL_DOWN
+        @detail_viewport.scroll_down(MOUSE_SCROLL_LINES)
+      else
+        @detail_viewport.scroll_up(MOUSE_SCROLL_LINES)
+      end
+    end
+
+    def handle_help_mouse(msg)
+      return unless msg.wheel?
+
+      if msg.button == Chamomile::MOUSE_WHEEL_DOWN
+        @help.handle_key(:down)
+      else
+        @help.handle_key(:up)
+      end
+    end
+
+    def handle_command_log_mouse(msg)
+      return unless msg.wheel?
+
+      if msg.button == Chamomile::MOUSE_WHEEL_DOWN
+        @command_log_overlay.handle_key(:down)
+      else
+        @command_log_overlay.handle_key(:up)
+      end
+    end
+
+    def panel_index_at_y(y)
+      heights = distribute_panel_heights(@height - 2)
+      cumulative = 0
+      heights.each_with_index do |h, i|
+        return i if y >= cumulative && y < cumulative + h
+        cumulative += h
+      end
+      nil
+    end
+
+    def item_index_at_y(panel_index, y)
+      heights = distribute_panel_heights(@height - 2)
+      panel_start = heights[0...panel_index].sum
+      panel_h = heights[panel_index]
+
+      # Content area is inside the border (1 line top, 1 line bottom)
+      content_y = y - panel_start - 1
+      return nil if content_y < 0 || content_y >= panel_h - 2
+
+      panel = @panels[panel_index]
+      idx = panel.scroll_offset + content_y
+      return nil if idx >= panel.filtered_items.size
+
+      idx
     end
 
     def handle_table_browser_key(msg)
@@ -474,6 +616,11 @@ module LazyRails
     # ─── Confirmation ─────────────────────────────────────
 
     def start_confirmation(command, tier: nil, required_text: nil)
+      if @panel_busy.include?(current_panel.type)
+        set_flash("Command already running...")
+        return nil
+      end
+
       tier ||= Confirmation.detect_tier(command)
       return run_rails_cmd(command, current_panel.type) if tier == :green
 

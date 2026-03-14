@@ -41,4 +41,4 @@ if project.old_rails?
 end
 
 app = LazyRails::App.new(project)
-Chamomile.run(app, alt_screen: true)
+Chamomile.run(app, alt_screen: true, mouse: :cell_motion)

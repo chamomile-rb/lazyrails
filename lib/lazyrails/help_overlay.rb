@@ -7,6 +7,7 @@ module LazyRails
         ["Tab/Shift+Tab", "Cycle panels"],
         ["1-9", "Jump to panel"],
         ["j/k", "Scroll up/down"],
+        ["J/K", "Scroll detail pane"],
         ["Enter", "Select / expand"],
         ["q", "Quit"],
         ["?", "Toggle help"],
@@ -55,11 +56,19 @@ module LazyRails
         ["f", "Cycle filter"],
         ["R", "Refresh"]
       ] },
+      { section: "Rake", bindings: [
+        ["Enter", "Run selected task"]
+      ] },
       { section: "Gems", bindings: [
         ["Enter", "Show gem info"],
         ["u", "Update gem"],
         ["U", "Update all"],
         ["o", "Open homepage"]
+      ] },
+      { section: "Mouse", bindings: [
+        ["Scroll wheel", "Scroll panels / detail"],
+        ["Left click", "Focus panel / select item"],
+        ["Shift+drag", "Select text (copy)"]
       ] }
     ].freeze
 

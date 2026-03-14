@@ -9,6 +9,7 @@ module LazyRails
       @visible = false
       @cursor = 0
       @detail = nil
+      @scroll_offset = 0
     end
 
     def visible? = @visible
@@ -17,6 +18,7 @@ module LazyRails
       @visible = true
       @cursor = 0
       @detail = nil
+      @scroll_offset = 0
     end
 
     def hide
@@ -40,17 +42,38 @@ module LazyRails
         @detail = nil
         nil
       when :enter
-        @detail = @command_log.entries[@cursor]
+        entry = @command_log.entries[@cursor]
+        @detail = @detail ? nil : entry
         nil
       when "q" then :quit
       end
     end
 
-    def render(width:)
+    def render(width:, height: nil)
       return "No commands executed yet.\n\nPress L or Esc to close." if @command_log.empty?
 
       header = Chamomile::Style.new.bold.render("Command Log")
-      list = Views::CommandLogView.render(@command_log, width: width - 4, selected: @cursor)
+      footer = "j/k navigate | Enter detail | L or Esc close"
+
+      if height
+        # Reserve: header(1) + blank(1) + footer blank(1) + footer(1) = 4
+        usable = height - 4
+        list_height = if @detail
+                        # Split: top portion for list, rest for detail
+                        [(usable * 0.4).to_i, 3].max
+                      else
+                        [usable, 3].max
+                      end
+      else
+        list_height = @command_log.size
+      end
+
+      clamp_scroll(list_height)
+
+      list = Views::CommandLogView.render_window(
+        @command_log, width: width - 4, selected: @cursor,
+                      offset: @scroll_offset, limit: list_height
+      )
 
       parts = [header, "", list]
 
@@ -61,8 +84,17 @@ module LazyRails
       end
 
       parts << ""
-      parts << "j/k navigate | Enter detail | L or Esc close | q quit"
+      parts << footer
       parts.join("\n")
+    end
+
+    private
+
+    def clamp_scroll(visible_height)
+      @scroll_offset = @cursor if @cursor < @scroll_offset
+      @scroll_offset = @cursor - visible_height + 1 if @cursor >= @scroll_offset + visible_height
+      max_offset = [@command_log.size - visible_height, 0].max
+      @scroll_offset = @scroll_offset.clamp(0, max_offset)
     end
   end
 end

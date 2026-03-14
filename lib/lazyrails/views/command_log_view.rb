@@ -6,35 +6,49 @@ module LazyRails
       DIM = "#666666"
 
       def self.render(command_log, width:, selected: 0)
+        render_window(command_log, width: width, selected: selected,
+                                   offset: 0, limit: command_log.size)
+      end
+
+      def self.render_window(command_log, width:, selected: 0, offset: 0, limit: nil)
         return "No commands executed yet." if command_log.empty?
 
-        command_log.entries.each_with_index.map do |entry, i|
-          icon = entry.success? ? "\u2713" : "\u2717"
-          color = entry.success? ? "#04b575" : "#ff6347"
-          duration = format("%.1fs", entry.duration_ms / 1000.0)
-          cmd_text = ViewHelpers.truncate(entry.command, width - 12)
-          text = "#{icon} #{cmd_text.ljust(width - 12)} #{duration}"
+        entries = command_log.entries
+        limit ||= entries.size
+        visible = entries[offset, limit] || []
 
-          lines = []
-          if i == selected
-            lines << ViewHelpers.selected_style.render(text)
-          else
-            styled_icon = Chamomile::Style.new.foreground(color).render(icon)
-            lines << "#{styled_icon} #{cmd_text.ljust(width - 12)} #{duration}"
-          end
-
-          if entry.annotation
-            annotation_line = "  \u21b3 #{entry.annotation}"
-            lines << Chamomile::Style.new.foreground(DIM).render(annotation_line)
-          end
-
-          if entry.undo_command
-            undo_line = "  \u21b3 Undo: #{entry.undo_command.join(' ')}"
-            lines << Chamomile::Style.new.foreground(DIM).render(undo_line)
-          end
-
-          lines.join("\n")
+        visible.each_with_index.map do |entry, i|
+          actual_index = i + offset
+          render_entry(entry, width: width, selected: actual_index == selected)
         end.join("\n")
+      end
+
+      def self.render_entry(entry, width:, selected:)
+        icon = entry.success? ? "\u2713" : "\u2717"
+        color = entry.success? ? "#04b575" : "#ff6347"
+        duration = format("%.1fs", entry.duration_ms / 1000.0)
+        cmd_text = ViewHelpers.truncate(entry.command, width - 12)
+        text = "#{icon} #{cmd_text.ljust(width - 12)} #{duration}"
+
+        lines = []
+        if selected
+          lines << ViewHelpers.selected_style.render(text)
+        else
+          styled_icon = Chamomile::Style.new.foreground(color).render(icon)
+          lines << "#{styled_icon} #{cmd_text.ljust(width - 12)} #{duration}"
+        end
+
+        if entry.annotation
+          annotation_line = "  \u21b3 #{entry.annotation}"
+          lines << Chamomile::Style.new.foreground(DIM).render(annotation_line)
+        end
+
+        if entry.undo_command
+          undo_line = "  \u21b3 Undo: #{entry.undo_command.join(' ')}"
+          lines << Chamomile::Style.new.foreground(DIM).render(undo_line)
+        end
+
+        lines.join("\n")
       end
 
       def self.render_detail(entry, width:)
@@ -59,18 +73,30 @@ module LazyRails
         if entry.stdout && !entry.stdout.empty?
           lines << ""
           lines << "Output:"
-          lines << ("-" * [width - 4, 40].min)
-          lines << entry.stdout
+          lines << ("\u2500" * [width - 4, 40].min)
+          truncated_output(entry.stdout, max_lines: 20).each { |l| lines << l }
         end
 
         if entry.stderr && !entry.stderr.empty?
           lines << ""
           lines << "Errors:"
-          lines << ("-" * [width - 4, 40].min)
-          lines << entry.stderr
+          lines << ("\u2500" * [width - 4, 40].min)
+          truncated_output(entry.stderr, max_lines: 15).each { |l| lines << l }
         end
 
         lines.join("\n")
+      end
+
+      def self.truncated_output(text, max_lines:)
+        all_lines = text.lines.map(&:rstrip)
+        if all_lines.size > max_lines
+          shown = all_lines.first(max_lines)
+          remaining = all_lines.size - max_lines
+          shown << Chamomile::Style.new.foreground(DIM).render("... #{remaining} more lines (see full output in detail pane)")
+          shown
+        else
+          all_lines
+        end
       end
     end
   end

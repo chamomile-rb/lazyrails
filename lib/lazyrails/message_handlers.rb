@@ -91,8 +91,12 @@ module LazyRails
     end
 
     def handle_command_finished(msg)
+      @panel_busy.delete(msg.panel)
+      @force_quit = false
+      @last_command_result[msg.panel] = msg.entry
       @command_log.add(msg.entry)
       set_flash("#{msg.entry.success? ? "\u2713" : "\u2717"} #{msg.entry.command} (#{msg.entry.duration_ms}ms)")
+      update_detail_content
 
       case msg.panel
       when :database, :models then return load_introspect_cmd
@@ -104,6 +108,8 @@ module LazyRails
     end
 
     def handle_test_finished(msg)
+      @panel_busy.delete(:tests)
+      @force_quit = false
       @command_log.add(msg.command_entry) if msg.command_entry
       tests_panel = find_panel(:tests)
       idx = tests_panel.items.index { |f| f.path == msg.path }

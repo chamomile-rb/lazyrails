@@ -145,10 +145,23 @@ module LazyRails
 
     # Detect server startup across common Ruby servers
     def server_ready?(line)
-      line.include?("Listening on") ||     # Puma
-        line.include?("listening on") ||   # Falcon, Vite
-        line.include?("port=") ||          # WEBrick ("port=3000")
-        line.include?("Ctrl-C to stop")    # WEBrick, Thin
+      ready = line.include?("Listening on") || # Puma
+              line.include?("listening on") || # Falcon, Vite
+              line.include?("port=") || # WEBrick ("port=3000")
+              line.include?("Ctrl-C to stop") # WEBrick, Thin
+      detect_actual_port(line) if ready
+      ready
+    end
+
+    # Extract the real port from server output so we display the correct one
+    def detect_actual_port(line)
+      # Puma: "Listening on http://0.0.0.0:3100"
+      # Falcon: "listening on http://localhost:3000"
+      # WEBrick: "port=3100"
+      if (match = line.match(/:(\d{2,5})\b/))
+        detected = match[1].to_i
+        @port = detected if detected.positive? && detected < 65_536
+      end
     end
   end
 end

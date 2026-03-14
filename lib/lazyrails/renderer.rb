@@ -34,8 +34,14 @@ module LazyRails
 
         box_lines = box.lines
         if box_lines.any?
-          title = " #{panel.title} "
-          title_styled = Chamomile::Style.new.foreground(border_color).bold.render(title)
+          running = @panel_busy.include?(panel.type)
+          title_label = running ? "#{panel.title} \u25CF" : panel.title
+          title = " #{title_label} "
+          title_styled = if running
+                           Chamomile::Style.new.foreground("#e5c07b").bold.render(title)
+                         else
+                           Chamomile::Style.new.foreground(border_color).bold.render(title)
+                         end
           box_lines[0] = inject_title(box_lines[0], title_styled, title.length)
         end
 
@@ -50,7 +56,8 @@ module LazyRails
     def panel_cache_key(panel, focused, width, height)
       base = [panel.items.object_id, panel.items.size, panel.cursor,
               panel.scroll_offset, panel.filter_text, panel.loading,
-              panel.error, panel.title, focused, width, height]
+              panel.error, panel.title, focused, width, height,
+              @panel_busy.include?(panel.type)]
       case panel.type
       when :status
         base << @about_data.object_id
@@ -126,9 +133,21 @@ module LazyRails
 
       box_lines = box.lines
       if box_lines.any?
-        title = " Detail "
+        scrollable = @detail_viewport.total_line_count > @detail_viewport.height
+        title = if scrollable
+                  pct = (@detail_viewport.scroll_percent * 100).round
+                  " Detail (#{pct}%) "
+                else
+                  " Detail "
+                end
         title_styled = Chamomile::Style.new.foreground(border_color).bold.render(title)
         box_lines[0] = inject_title(box_lines[0], title_styled, title.length)
+
+        if scrollable && box_lines.size > 1
+          footer = " \u2191\u2193 scroll "
+          footer_styled = Chamomile::Style.new.foreground(border_color).render(footer)
+          box_lines[-1] = inject_title(box_lines[-1], footer_styled, footer.length)
+        end
       end
 
       box_lines.join
@@ -151,7 +170,10 @@ module LazyRails
                             "Select a route."
                           end
                         when :database
-                          if item
+                          if @panel_busy.include?(:database)
+                            running_label = Chamomile::Style.new.foreground("#e5c07b").bold.render("\u25CF Running command...")
+                            "#{running_label}\n\nOutput will appear when complete."
+                          elsif item
                             Views::DatabaseView.render_detail(item, @project.dir, width: detail_width,
                                                                                   file_cache: @file_cache)
                           else
@@ -160,11 +182,18 @@ module LazyRails
                         when :models
                           item ? Views::ModelsView.render_detail(item, width: detail_width) : "Select a model."
                         when :tests
-                          item ? Views::TestsView.render_detail(item, width: detail_width) : "Select a test file."
+                          if @panel_busy.include?(:tests) && item
+                            running_label = Chamomile::Style.new.foreground("#e5c07b").bold.render("\u25CF Running...")
+                            "#{item.path}\n\n#{running_label}\n\nOutput will appear here when complete."
+                          elsif item
+                            Views::TestsView.render_detail(item, width: detail_width)
+                          else
+                            "Select a test file."
+                          end
                         when :gems
                           item ? Views::GemsView.render_detail(item, width: detail_width) : "Select a gem."
                         when :rake
-                          item ? Views::RakeView.render_detail(item, width: detail_width) : "Select a rake task."
+                          render_rake_detail(item, detail_width)
                         when :console
                           if item
                             Views::ConsoleView.render_detail(item,
@@ -196,8 +225,8 @@ module LazyRails
       return Chamomile::Style.new.foreground("#e5c07b").width(@width).render("  #{@flash.message}".slice(0, @width)) if @flash.active?
 
       hints = [
-        ["Tab", "navigate"], ["j/k", "scroll"], ["Enter", "select"],
-        ["x", "actions"], ["L", "log"], ["?", "help"], ["q", "quit"]
+        ["Tab", "navigate"], ["j/k", "scroll"], ["J/K", "scroll detail"],
+        ["Enter", "select"], ["Shift+drag", "copy text"], ["x", "actions"], ["?", "help"], ["q", "quit"]
       ]
       bar = " #{hints.map do |key, desc|
         styled_key = Chamomile::Style.new.bold.foreground('#b48ead').render(key)
@@ -260,7 +289,7 @@ module LazyRails
     end
 
     def render_command_log_box
-      content = @command_log_overlay.render(width: @width - 8)
+      content = @command_log_overlay.render(width: @width - 8, height: @height - 8)
 
       box_width = [@width - 4, 60].max
       box_width = [box_width, @width - 2].min
@@ -324,6 +353,18 @@ module LazyRails
         Views::MailerView.render_detail_content(item, @mailer_preview_content, width: width)
       else
         Views::MailerView.render_detail(item, width: width)
+      end
+    end
+
+    def render_rake_detail(item, width)
+      return "Select a rake task." unless item
+
+      if @panel_busy.include?(:rake)
+        Views::RakeView.render_detail_running(item, width: width)
+      elsif @last_command_result[:rake]
+        Views::RakeView.render_detail_with_output(item, @last_command_result[:rake], width: width)
+      else
+        Views::RakeView.render_detail(item, width: width)
       end
     end
 

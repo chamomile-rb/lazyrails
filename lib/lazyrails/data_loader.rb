@@ -61,7 +61,10 @@ module LazyRails
 
     def run_rails_cmd(command, panel_type)
       display = command.is_a?(Array) ? command.join(" ") : command
+      @panel_busy << panel_type
+      @last_command_result.delete(panel_type)
       set_flash("Running: #{display}...")
+      update_detail_content
       project_dir = @project.dir
       cmd(lambda {
         result = CommandRunner.run(command, dir: project_dir)
@@ -70,7 +73,9 @@ module LazyRails
     end
 
     def run_test_file_cmd(test_file)
+      @panel_busy << :tests
       set_flash("Running: #{test_file.path}...")
+      update_detail_content
       project_dir = @project.dir
       path = test_file.path
       test_cmd = path.start_with?("spec/") ? ["bundle", "exec", "rspec", path] : ["bin/rails", "test", path]

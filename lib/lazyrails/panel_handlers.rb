@@ -193,7 +193,7 @@ module LazyRails
       when "e"
         item = current_panel.selected_item
         if item && item.status == "scheduled"
-          start_confirmation("Dispatch scheduled job ##{item.id} now?", tier: :green)
+          start_confirmation("Dispatch scheduled job ##{item.id} now?", tier: :yellow)
           @pending_job_action = PendingJobAction.new(action: :dispatch, job_id: item.id)
         end
       when "f"
@@ -540,7 +540,7 @@ module LazyRails
       item = current_panel.selected_item
       return unless item && item.status == "scheduled"
 
-      start_confirmation("Dispatch scheduled job ##{item.id} now?", tier: :green)
+      start_confirmation("Dispatch scheduled job ##{item.id} now?", tier: :yellow)
       @pending_job_action = PendingJobAction.new(action: :dispatch, job_id: item.id)
     end
 
